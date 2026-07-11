@@ -109,30 +109,64 @@ const LOCATIONS = [
 ];
 
 /* ================= MOCK LISTINGS =================
-   Phone numbers are fictional placeholders. In production they come from
-   the lister's verified account. */
+   At least one sample listing per city/town. Phone numbers are fictional
+   placeholders. In production they come from the lister's verified account. */
 const LISTINGS = [
-  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", lat: 9.012, lng: 38.786, price: 45000, beds: 2, size: 85, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 214, posted: "2026-07-11T08:30:00" },
-  { id: 2, title: "Ground-floor shop on main road", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Merkato", lat: 9.033, lng: 38.74, price: 60000, beds: null, size: 48, lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 158, posted: "2026-07-10T16:45:00" },
-  { id: 3, title: "Studio near Megenagna roundabout", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Megenagna", lat: 9.02, lng: 38.801, price: 15000, beds: 1, size: 38, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "W/ro Hanna", verified: true, views: 96, posted: "2026-07-09T11:20:00" },
-  { id: 4, title: "Office floor, elevator building", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Kazanchis", lat: 9.018, lng: 38.77, price: 120000, beds: null, size: 220, lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 342, posted: "2026-07-06T09:00:00" },
-  { id: 5, title: "3-bedroom villa with compound", city: "Addis Ababa", region: "Addis Ababa", hood: "CMC", lat: 9.017, lng: 38.828, type: "Residential", price: 80000, beds: 3, size: 180, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 187, posted: "2026-07-08T14:10:00" },
-  { id: 6, title: "Lake-view apartment, 2 bedrooms", type: "Residential", city: "Bahir Dar", region: "Amhara", hood: "Tana Lakeside", lat: 11.6, lng: 37.39, price: 18000, beds: 2, size: 90, lister: "Owner", name: "Ato Mulugeta", phone: "+251900000003", owner: null, verified: true, views: 73, posted: "2026-07-10T07:55:00" },
-  { id: 7, title: "Café / restaurant space, Piassa corner", type: "Business", city: "Bahir Dar", region: "Amhara", hood: "Shum Abo", lat: 11.585, lng: 37.383, price: 35000, beds: null, size: 110, lister: "Broker", name: "Abay Brokers", phone: "+251900000004", owner: "Ato Kassahun", verified: false, views: 51, posted: "2026-07-04T13:30:00" },
-  { id: 8, title: "1-bedroom near Hawassa University", type: "Residential", city: "Hawassa", region: "Sidama", hood: "Tabor", lat: 7.043, lng: 38.492, price: 9000, beds: 1, size: 45, lister: "Owner", name: "W/ro Tigist", phone: "+251900000005", owner: null, verified: true, views: 129, posted: "2026-07-11T06:15:00" },
-  { id: 9, title: "Retail unit facing lakeside walkway", type: "Business", city: "Hawassa", region: "Sidama", hood: "Amora Gedel Lakeside", lat: 7.058, lng: 38.463, price: 28000, beds: null, size: 60, lister: "Broker", name: "Sidama Homes", phone: "+251900000006", owner: "Ato Bekele", verified: true, views: 88, posted: "2026-07-07T10:40:00" },
-  { id: 10, title: "Family house with service quarter", type: "Residential", city: "Adama", region: "Oromia", hood: "Boku", lat: 8.55, lng: 39.255, price: 20000, beds: 3, size: 160, lister: "Broker", name: "Adama Link", phone: "+251900000007", owner: "W/ro Chaltu", verified: true, views: 64, posted: "2026-07-09T17:25:00" },
-  { id: 11, title: "Warehouse near expressway exit", type: "Business", city: "Adama", region: "Oromia", hood: "Migira", lat: 8.53, lng: 39.29, price: 55000, beds: null, size: 400, lister: "Owner", name: "Oromia Logistics", phone: "+251900000008", owner: null, verified: true, views: 47, posted: "2026-07-02T08:00:00" },
-  { id: 12, title: "2-bedroom apartment, Ayder", type: "Residential", city: "Mekelle", region: "Tigray", hood: "Ayder", lat: 13.497, lng: 39.483, price: 12000, beds: 2, size: 78, lister: "Owner", name: "Ato Gebre", phone: "+251900000009", owner: null, verified: false, views: 39, posted: "2026-07-05T12:50:00" },
-  { id: 13, title: "Guesthouse compound in Jugol", type: "Business", city: "Harar", region: "Harari", hood: "Jugol (Old Town)", lat: 9.311, lng: 42.137, price: 40000, beds: 6, size: 300, lister: "Broker", name: "Harar Heritage", phone: "+251900000010", owner: "Ato Abdi", verified: true, views: 112, posted: "2026-07-08T09:35:00" },
-  { id: 14, title: "Shop row unit, Kezira market", type: "Business", city: "Dire Dawa", region: "Dire Dawa", hood: "Kezira", lat: 9.593, lng: 41.866, price: 22000, beds: null, size: 35, lister: "Owner", name: "Ato Ahmed", phone: "+251900000011", owner: null, verified: true, views: 58, posted: "2026-07-10T15:05:00" },
-  { id: 15, title: "New 1-bedroom, university area", type: "Residential", city: "Jigjiga", region: "Somali", hood: "University Area", lat: 9.36, lng: 42.79, price: 7000, beds: 1, size: 50, lister: "Owner", name: "Faysa A.", phone: "+251900000012", owner: null, verified: false, views: 25, posted: "2026-07-03T18:20:00" },
-  { id: 16, title: "3-bedroom house, Ginjo", type: "Residential", city: "Jimma", region: "Oromia", hood: "Ginjo", lat: 7.678, lng: 36.834, price: 11000, beds: 3, size: 140, lister: "Broker", name: "Jimma Homes", phone: "+251900000013", owner: "Ato Tesfaye", verified: true, views: 71, posted: "2026-07-09T08:45:00" },
+  /* --- Addis Ababa --- */
+  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", kind: "Condominium", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", lat: 9.012, lng: 38.786, price: 45000, beds: 2, size: 85, features: ["Furnished", "Private kitchen", "Own electric meter", "Parking"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 214, posted: "2026-07-11T08:30:00" },
+  { id: 2, title: "Ground-floor shop on main road", type: "Business", kind: "Shop", city: "Addis Ababa", region: "Addis Ababa", hood: "Merkato", lat: 9.033, lng: 38.74, price: 60000, beds: null, size: 48, features: ["Main-road frontage", "Own electric meter"], lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 158, posted: "2026-07-10T16:45:00" },
+  { id: 3, title: "Studio near Megenagna roundabout", type: "Residential", kind: "Studio", city: "Addis Ababa", region: "Addis Ababa", hood: "Megenagna", lat: 9.02, lng: 38.801, price: 15000, beds: 1, size: 38, features: ["Private bathroom", "Water tank"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "W/ro Hanna", verified: true, views: 96, posted: "2026-07-09T11:20:00" },
+  { id: 4, title: "Office floor, elevator building", type: "Business", kind: "Office", city: "Addis Ababa", region: "Addis Ababa", hood: "Kazanchis", lat: 9.018, lng: 38.77, price: 120000, beds: null, size: 220, features: ["Elevator", "Backup generator", "Parking", "Guarded compound"], lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 342, posted: "2026-07-06T09:00:00" },
+  { id: 5, title: "3-bedroom villa with compound", type: "Residential", kind: "Villa / private house", city: "Addis Ababa", region: "Addis Ababa", hood: "CMC", lat: 9.017, lng: 38.828, price: 80000, beds: 3, size: 180, features: ["Guarded compound", "Parking", "Water tank", "Service quarter"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 187, posted: "2026-07-08T14:10:00" },
+  /* --- Amhara --- */
+  { id: 6, title: "Lake-view apartment, 2 bedrooms", type: "Residential", kind: "Apartment", city: "Bahir Dar", region: "Amhara", hood: "Tana Lakeside", lat: 11.6, lng: 37.39, price: 18000, beds: 2, size: 90, features: ["Balcony", "Lake view", "Private kitchen"], lister: "Owner", name: "Ato Mulugeta", phone: "+251900000003", owner: null, verified: true, views: 73, posted: "2026-07-10T07:55:00" },
+  { id: 7, title: "Café / restaurant space, Piassa corner", type: "Business", kind: "Café / restaurant", city: "Bahir Dar", region: "Amhara", hood: "Shum Abo", lat: 11.585, lng: 37.383, price: 35000, beds: null, size: 110, features: ["Corner location", "Customer parking"], lister: "Broker", name: "Abay Brokers", phone: "+251900000004", owner: "Ato Kassahun", verified: false, views: 51, posted: "2026-07-04T13:30:00" },
+  { id: 20, title: "Shop facing Piassa square", type: "Business", kind: "Shop", city: "Gondar", region: "Amhara", hood: "Piassa", lat: 12.606, lng: 37.466, price: 12000, beds: null, size: 28, features: ["High foot traffic", "Own electric meter"], lister: "Owner", name: "Ato Yohannes", phone: "+251900000017", owner: null, verified: true, views: 55, posted: "2026-07-08T10:20:00" },
+  { id: 21, title: "2 rooms in shared compound", type: "Residential", kind: "Room in shared compound", city: "Dessie", region: "Amhara", hood: "Segno Gebeya", lat: 11.125, lng: 39.632, price: 4500, beds: 2, size: 35, features: ["Shared bathroom", "Private kitchen"], lister: "Owner", name: "W/ro Fatuma", phone: "+251900000018", owner: null, verified: true, views: 29, posted: "2026-07-06T15:40:00" },
+  { id: 22, title: "1-bedroom apartment near university", type: "Residential", kind: "Apartment", city: "Debre Birhan", region: "Amhara", hood: "Piassa", lat: 9.679, lng: 39.526, price: 6000, beds: 1, size: 42, features: ["Private bathroom", "Own electric meter"], lister: "Broker", name: "Semen Shewa Link", phone: "+251900000019", owner: "Ato Getachew", verified: true, views: 38, posted: "2026-07-10T09:10:00" },
+  { id: 23, title: "Shop on the main road", type: "Business", kind: "Shop", city: "Debre Markos", region: "Amhara", hood: "Piassa", lat: 10.334, lng: 37.724, price: 7000, beds: null, size: 25, features: ["Main-road frontage"], lister: "Owner", name: "Ato Molla", phone: "+251900000020", owner: null, verified: false, views: 18, posted: "2026-07-05T11:00:00" },
+  /* --- Oromia --- */
+  { id: 10, title: "Family house with service quarter", type: "Residential", kind: "Villa / private house", city: "Adama", region: "Oromia", hood: "Boku", lat: 8.55, lng: 39.255, price: 20000, beds: 3, size: 160, features: ["Service quarter", "Parking", "Guarded compound"], lister: "Broker", name: "Adama Link", phone: "+251900000007", owner: "W/ro Chaltu", verified: true, views: 64, posted: "2026-07-09T17:25:00" },
+  { id: 11, title: "Warehouse near expressway exit", type: "Business", kind: "Warehouse", city: "Adama", region: "Oromia", hood: "Migira", lat: 8.53, lng: 39.29, price: 55000, beds: null, size: 400, features: ["Truck access", "24hr guard"], lister: "Owner", name: "Oromia Logistics", phone: "+251900000008", owner: null, verified: true, views: 47, posted: "2026-07-02T08:00:00" },
+  { id: 16, title: "3-bedroom house, Ginjo", type: "Residential", kind: "Villa / private house", city: "Jimma", region: "Oromia", hood: "Ginjo", lat: 7.678, lng: 36.834, price: 11000, beds: 3, size: 140, features: ["Large compound", "Parking", "Water tank"], lister: "Broker", name: "Jimma Homes", phone: "+251900000013", owner: "Ato Tesfaye", verified: true, views: 71, posted: "2026-07-09T08:45:00" },
+  { id: 17, title: "2-bedroom apartment near Babogaya lake", type: "Residential", kind: "Apartment", city: "Bishoftu", region: "Oromia", hood: "Babogaya", lat: 8.766, lng: 38.99, price: 14000, beds: 2, size: 75, features: ["Balcony", "Lake view", "Own electric meter"], lister: "Owner", name: "Ato Solomon", phone: "+251900000014", owner: null, verified: true, views: 42, posted: "2026-07-10T12:00:00" },
+  { id: 18, title: "1 room in shared compound", type: "Residential", kind: "Room in shared compound", city: "Shashemene", region: "Oromia", hood: "Arada", lat: 7.204, lng: 38.594, price: 3500, beds: 1, size: 20, features: ["Shared bathroom", "Water tank"], lister: "Owner", name: "W/ro Zewditu", phone: "+251900000015", owner: null, verified: false, views: 31, posted: "2026-07-09T13:15:00" },
+  { id: 19, title: "2-room house with small compound", type: "Residential", kind: "Villa / private house", city: "Nekemte", region: "Oromia", hood: "Darge", lat: 9.086, lng: 36.54, price: 6000, beds: 2, size: 60, features: ["Private kitchen", "Water tank"], lister: "Broker", name: "Wallaga Homes", phone: "+251900000016", owner: "Ato Gemechu", verified: true, views: 22, posted: "2026-07-07T16:30:00" },
+  /* --- Tigray --- */
+  { id: 12, title: "2-bedroom apartment, Ayder", type: "Residential", kind: "Apartment", city: "Mekelle", region: "Tigray", hood: "Ayder", lat: 13.497, lng: 39.483, price: 12000, beds: 2, size: 78, features: ["Balcony", "Water tank"], lister: "Owner", name: "Ato Gebre", phone: "+251900000009", owner: null, verified: false, views: 39, posted: "2026-07-05T12:50:00" },
+  { id: 24, title: "2-bedroom family house", type: "Residential", kind: "Villa / private house", city: "Adigrat", region: "Tigray", hood: "Piassa", lat: 14.277, lng: 39.462, price: 5000, beds: 2, size: 80, features: ["Private kitchen", "Water tank", "Parking"], lister: "Owner", name: "W/ro Berhan", phone: "+251900000021", owner: null, verified: true, views: 21, posted: "2026-07-09T07:45:00" },
+  /* --- Sidama --- */
+  { id: 8, title: "1-bedroom near Hawassa University", type: "Residential", kind: "Apartment", city: "Hawassa", region: "Sidama", hood: "Tabor", lat: 7.043, lng: 38.492, price: 9000, beds: 1, size: 45, features: ["Private bathroom", "Own electric meter"], lister: "Owner", name: "W/ro Tigist", phone: "+251900000005", owner: null, verified: true, views: 129, posted: "2026-07-11T06:15:00" },
+  { id: 9, title: "Retail unit facing lakeside walkway", type: "Business", kind: "Shop", city: "Hawassa", region: "Sidama", hood: "Amora Gedel Lakeside", lat: 7.058, lng: 38.463, price: 28000, beds: null, size: 60, features: ["Lakeside foot traffic", "Own electric meter"], lister: "Broker", name: "Sidama Homes", phone: "+251900000006", owner: "Ato Bekele", verified: true, views: 88, posted: "2026-07-07T10:40:00" },
+  /* --- South Ethiopia --- */
+  { id: 25, title: "Shop inside Merkato area", type: "Business", kind: "Shop", city: "Wolaita Sodo", region: "South Ethiopia", hood: "Merkato", lat: 6.855, lng: 37.754, price: 9000, beds: null, size: 30, features: ["Market frontage", "Own electric meter"], lister: "Broker", name: "Sodo Brokers", phone: "+251900000022", owner: "Ato Tadesse", verified: true, views: 33, posted: "2026-07-08T14:55:00" },
+  { id: 26, title: "2-bedroom house, Sikela", type: "Residential", kind: "Villa / private house", city: "Arba Minch", region: "South Ethiopia", hood: "Sikela", lat: 6.043, lng: 37.553, price: 6500, beds: 2, size: 85, features: ["Guarded compound", "Water tank", "Parking"], lister: "Owner", name: "Ato Alemu", phone: "+251900000023", owner: null, verified: true, views: 27, posted: "2026-07-07T09:20:00" },
+  { id: 27, title: "1 room in shared compound", type: "Residential", kind: "Room in shared compound", city: "Dilla", region: "South Ethiopia", hood: "Piassa", lat: 6.412, lng: 38.313, price: 3000, beds: 1, size: 18, features: ["Shared bathroom"], lister: "Owner", name: "W/ro Aster", phone: "+251900000024", owner: null, verified: false, views: 15, posted: "2026-07-04T17:10:00" },
+  /* --- Central Ethiopia --- */
+  { id: 28, title: "3-bedroom private house", type: "Residential", kind: "Villa / private house", city: "Hosaena", region: "Central Ethiopia", hood: "Arada", lat: 7.552, lng: 37.853, price: 7500, beds: 3, size: 120, features: ["Parking", "Water tank", "Private kitchen"], lister: "Broker", name: "Hadiya Homes", phone: "+251900000025", owner: "Ato Desta", verified: true, views: 24, posted: "2026-07-09T12:35:00" },
+  /* --- South West Ethiopia --- */
+  { id: 29, title: "2-bedroom house with garden", type: "Residential", kind: "Villa / private house", city: "Bonga", region: "South West Ethiopia", hood: "Piassa", lat: 7.283, lng: 36.234, price: 5500, beds: 2, size: 90, features: ["Garden", "Water tank"], lister: "Owner", name: "Ato Wondimu", phone: "+251900000026", owner: null, verified: true, views: 12, posted: "2026-07-06T08:25:00" },
+  /* --- Afar --- */
+  { id: 30, title: "1-bedroom staff apartment", type: "Residential", kind: "Apartment", city: "Semera", region: "Afar", hood: "Airport Road", lat: 11.793, lng: 41.013, price: 10000, beds: 1, size: 48, features: ["Air conditioning", "Furnished", "Backup generator"], lister: "Owner", name: "Afar Properties", phone: "+251900000027", owner: null, verified: true, views: 19, posted: "2026-07-10T11:50:00" },
+  /* --- Somali --- */
+  { id: 15, title: "New 1-bedroom, university area", type: "Residential", kind: "Apartment", city: "Jigjiga", region: "Somali", hood: "University Area", lat: 9.36, lng: 42.79, price: 7000, beds: 1, size: 50, features: ["Private bathroom", "New building"], lister: "Owner", name: "Faysa A.", phone: "+251900000012", owner: null, verified: false, views: 25, posted: "2026-07-03T18:20:00" },
+  /* --- Harari --- */
+  { id: 13, title: "Guesthouse compound in Jugol", type: "Business", kind: "Guesthouse", city: "Harar", region: "Harari", hood: "Jugol (Old Town)", lat: 9.311, lng: 42.137, price: 40000, beds: 6, size: 300, features: ["Furnished", "6 guest rooms", "Courtyard"], lister: "Broker", name: "Harar Heritage", phone: "+251900000010", owner: "Ato Abdi", verified: true, views: 112, posted: "2026-07-08T09:35:00" },
+  /* --- Dire Dawa --- */
+  { id: 14, title: "Shop row unit, Kezira market", type: "Business", kind: "Shop", city: "Dire Dawa", region: "Dire Dawa", hood: "Kezira", lat: 9.593, lng: 41.866, price: 22000, beds: null, size: 35, features: ["Market frontage"], lister: "Owner", name: "Ato Ahmed", phone: "+251900000011", owner: null, verified: true, views: 58, posted: "2026-07-10T15:05:00" },
+  /* --- Benishangul-Gumuz --- */
+  { id: 31, title: "2-bedroom house near main square", type: "Residential", kind: "Villa / private house", city: "Assosa", region: "Benishangul-Gumuz", hood: "Central", lat: 10.072, lng: 34.525, price: 6000, beds: 2, size: 75, features: ["Private kitchen", "Parking"], lister: "Owner", name: "Ato Ashadli", phone: "+251900000028", owner: null, verified: true, views: 14, posted: "2026-07-08T13:05:00" },
+  /* --- Gambela --- */
+  { id: 32, title: "1-bedroom house, Newland", type: "Residential", kind: "Villa / private house", city: "Gambela", region: "Gambela", hood: "Newland", lat: 8.253, lng: 34.594, price: 5000, beds: 1, size: 55, features: ["Water tank", "Private bathroom"], lister: "Owner", name: "Ato Obang", phone: "+251900000029", owner: null, verified: true, views: 16, posted: "2026-07-07T14:40:00" },
 ];
 
 /* Demo accounts: the landlord demo signs in as W/ro Almaz, the broker demo as Meskerem B. */
 const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
 const TENANT_ME = "You (visitor)";
+
+/* Options for the posting form */
+const PROPERTY_KINDS = ["Room in shared compound", "Condominium", "Apartment", "Studio", "Villa / private house", "Shop", "Office", "Warehouse", "Guesthouse", "Café / restaurant"];
+const FEATURE_OPTIONS = ["Private bathroom", "Shared bathroom", "Private kitchen", "Water tank", "Own electric meter", "Furnished", "Parking", "Guarded compound", "Balcony", "Backup generator"];
 
 /* ================= SEED CHAT THREADS =================
    Each thread: { id: `${listingId}:${tenant}`, listingId, tenant, tenantPhone, messages: [{from, text, at}] }
@@ -450,8 +484,90 @@ function RoleGate({ onPick }) {
   );
 }
 
+/* ================= REGISTRATION / SIGN IN =================
+   Prototype auth: register with phone or email. The verification code is
+   simulated — in production, send a real SMS OTP (e.g. AfroMessage/Twilio)
+   or an email link, and store accounts in a database with hashed sessions. */
+function AuthGate({ role, onDone, onSkip, onBack }) {
+  const [method, setMethod] = useState("phone");
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [stage, setStage] = useState("form"); // form -> code
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+
+  const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
+  const contactOk = method === "phone"
+    ? /^(\+251|0)9\d{8}$/.test(contact.replace(/[\s-]/g, ""))
+    : /^\S+@\S+\.\S+$/.test(contact.trim());
+
+  const requestCode = () => {
+    if (name.trim().length < 2) return setError("Please enter your full name.");
+    if (!contactOk) return setError(method === "phone" ? "Enter a valid Ethiopian mobile, e.g. +251 9… or 09…" : "Enter a valid email address.");
+    setError("");
+    setStage("code");
+  };
+
+  const verify = () => {
+    if (code.trim().length < 4) return setError("Enter the 4-digit code (demo: any 4 digits work).");
+    onDone({ name: name.trim(), method, contact: contact.trim() });
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont }}>
+      <div style={{ background: T.card, borderRadius: 16, padding: "26px 26px 22px", width: "100%", maxWidth: 400, boxShadow: "0 10px 30px rgba(0,0,0,.25)" }}>
+        <div style={{ fontFamily: displayFont, fontSize: 23, fontWeight: 700, color: T.forest }}>Create your account</div>
+        <div style={{ fontSize: 13, color: T.mute, margin: "4px 0 18px" }}>
+          Registering as <strong>{roleLabel}</strong>{" · "}
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.leaf, cursor: "pointer", fontSize: 13, padding: 0, textDecoration: "underline" }}>change</button>
+        </div>
+
+        {stage === "form" ? (
+          <>
+            <Field label="Full name / ሙሉ ስም">
+              <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Selam Tesfaye" />
+            </Field>
+            <Field label="Register with">
+              <div style={{ display: "flex", gap: 8 }}>
+                <Chip active={method === "phone"} onClick={() => { setMethod("phone"); setContact(""); setError(""); }}>📱 Phone</Chip>
+                <Chip active={method === "email"} onClick={() => { setMethod("email"); setContact(""); setError(""); }}>✉️ Email</Chip>
+              </div>
+            </Field>
+            <Field label={method === "phone" ? "Mobile number" : "Email address"}>
+              <input style={inputStyle} value={contact} onChange={(e) => setContact(e.target.value)}
+                placeholder={method === "phone" ? "+251 9… or 09…" : "name@example.com"}
+                inputMode={method === "phone" ? "tel" : "email"} />
+            </Field>
+            {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
+            <button onClick={requestCode} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Send verification code</button>
+            {role === "tenant" && (
+              <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 14, width: "100%", textAlign: "center", textDecoration: "underline" }}>
+                Skip for now — browse as guest
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 13.5, color: T.ink, margin: "0 0 4px" }}>We sent a code to <strong>{contact}</strong>.</p>
+            <p style={{ fontSize: 12, color: T.mute, margin: "0 0 14px" }}>Prototype — no real message is sent. Enter any 4 digits.</p>
+            <Field label="Verification code">
+              <input style={{ ...inputStyle, letterSpacing: 6, textAlign: "center", fontSize: 18 }} value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="••••" inputMode="numeric" />
+            </Field>
+            {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
+            <button onClick={verify} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Verify & continue</button>
+            <button onClick={() => { setStage("form"); setCode(""); setError(""); }} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 12, width: "100%", textAlign: "center", textDecoration: "underline" }}>
+              ← Change {method === "phone" ? "number" : "email"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================= SHARED HEADER ================= */
-function Header({ role, tabs, tab, setTab, onSwitchRole }) {
+function Header({ role, tabs, tab, setTab, onSwitchRole, account }) {
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
     <header style={{ background: T.forest, color: "#fff", padding: "12px 22px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -461,6 +577,9 @@ function Header({ role, tabs, tab, setTab, onSwitchRole }) {
       </div>
       <span style={{ fontSize: 11.5, background: "rgba(255,255,255,.14)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
         {roleLabel}
+      </span>
+      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,.85)" }}>
+        👤 {account ? account.name : "Guest"}
       </span>
       <nav style={{ display: "flex", gap: 6, marginLeft: 8, flexWrap: "wrap" }}>
         {tabs.map((t) => (
@@ -502,7 +621,8 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
         <TypeTag type={l.type} />
-        {l.beds != null && <span style={{ color: T.mute }}>{l.beds} bed{l.beds > 1 ? "s" : ""}</span>}
+        {l.kind && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: T.blueSoft, color: T.blue }}>{l.kind}</span>}
+        {l.beds != null && <span style={{ color: T.mute }}>{l.beds} room{l.beds > 1 ? "s" : ""}</span>}
         <span style={{ color: T.mute }}>{l.size} m²</span>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <Badge kind={l.lister} />
@@ -516,6 +636,13 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
       </div>
       {isSel && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}`, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {l.features && l.features.length > 0 && (
+            <div style={{ width: "100%", display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {l.features.map((f) => (
+                <span key={f} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 999, background: T.paper, border: `1px solid ${T.line}`, color: T.mute }}>✓ {f}</span>
+              ))}
+            </div>
+          )}
           <div style={{ fontSize: 13 }}>
             Listed by <strong>{l.name}</strong>{" "}
             {l.verified
@@ -536,9 +663,12 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
 }
 
 /* ================= POST FORM (landlord & broker) ================= */
-function PostForm({ role, onDone }) {
+function PostForm({ role, onDone, account }) {
   const [posted, setPosted] = useState(false);
+  const [kind, setKind] = useState("Apartment");
+  const [feat, setFeat] = useState([]);
   const isBroker = role === "broker";
+  const toggleFeat = (f) => setFeat((s) => s.includes(f) ? s.filter((x) => x !== f) : [...s, f]);
   if (posted) {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -568,11 +698,39 @@ function PostForm({ role, onDone }) {
         </div>
       )}
       <Field label="Property type"><div style={{ display: "flex", gap: 8 }}><Chip active>Residential</Chip><Chip>Business</Chip></div></Field>
+      <Field label="Kind of property">
+        <select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}>
+          {PROPERTY_KINDS.map((k) => <option key={k}>{k}</option>)}
+        </select>
+      </Field>
+      <Field label="Number of rooms">
+        <select style={inputStyle}>
+          <option>1 room</option><option>2 rooms</option><option>3 rooms</option><option>4 rooms</option><option>5+ rooms</option>
+          <option>Not applicable (shop / office / warehouse)</option>
+        </select>
+      </Field>
+      <Field label="Features — select all that apply">
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {FEATURE_OPTIONS.map((f) => (
+            <Chip key={f} small active={feat.includes(f)} onClick={() => toggleFeat(f)}>{feat.includes(f) ? "✓ " : ""}{f}</Chip>
+          ))}
+        </div>
+      </Field>
+      <Field label="Description / ዝርዝር መግለጫ">
+        <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }}
+          placeholder="e.g. Ground floor, 2 rooms in a quiet shared compound near the bus station. Water comes daily, separate electric meter, 10 minutes walk to the market…" />
+      </Field>
       <Field label="Region"><select style={inputStyle}>{LOCATIONS.map((r) => <option key={r.region}>{r.region}</option>)}</select></Field>
       <Field label="City"><select style={inputStyle}>{allCities.map((c) => <option key={c.name}>{c.name} — {c.tier}</option>)}</select></Field>
       <Field label="Neighbourhood / ሰፈር"><input style={inputStyle} placeholder="e.g. Bole Medhanealem" /></Field>
       <Field label="Monthly rent (ETB)"><input style={inputStyle} type="number" placeholder="e.g. 25000" /></Field>
       <Field label="Title"><input style={inputStyle} placeholder="e.g. 2-bedroom apartment near stadium" /></Field>
+      <Field label="Contact phone for this listing (optional)">
+        <input style={inputStyle} inputMode="tel" placeholder="+251 9…" />
+        <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
+          Leave empty to use your registered contact{account ? <> (<strong>{account.contact}</strong>)</> : ""}. Fill this only if tenants should reach you on a different number for this property.
+        </div>
+      </Field>
       <Field label="Pin the exact location">
         <div style={{ border: `1px dashed ${T.line}`, borderRadius: 8, padding: 16, textAlign: "center", color: T.mute, fontSize: 13, background: T.paper }}>
           📍 In production: draggable map pin + address autocomplete
@@ -586,7 +744,7 @@ function PostForm({ role, onDone }) {
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab, chats, sendMessage }) {
+function TenantApp({ tab, chats, sendMessage, meName }) {
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
   const [hood, setHood] = useState(null);
@@ -617,7 +775,7 @@ function TenantApp({ tab, chats, sendMessage }) {
     setSelected(null);
   };
 
-  const chatThread = chatListing ? chats.find((t) => t.listingId === chatListing.id && t.tenant === TENANT_ME) : null;
+  const chatThread = chatListing ? chats.find((t) => t.listingId === chatListing.id && t.tenant === meName) : null;
 
   const body = tab === "saved" ? (
     <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 20px 50px" }}>
@@ -708,7 +866,7 @@ function TenantApp({ tab, chats, sendMessage }) {
           thread={chatThread}
           listing={chatListing}
           me="tenant"
-          onSend={(text) => sendMessage(chatListing.id, TENANT_ME, "tenant", text)}
+          onSend={(text) => sendMessage(chatListing.id, meName, "tenant", text)}
           onClose={() => setChatListing(null)}
         />
       )}
@@ -717,7 +875,7 @@ function TenantApp({ tab, chats, sendMessage }) {
 }
 
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
-function ManagerApp({ role, tab, setTab, chats, sendMessage }) {
+function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
   const me = DEMO[role];
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
@@ -738,7 +896,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage }) {
     body = (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "26px 20px 60px" }}>
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "22px 24px" }}>
-          <PostForm role={role} onDone={() => setTab("listings")} />
+          <PostForm role={role} onDone={() => setTab("listings")} account={account} />
         </div>
       </div>
     );
@@ -871,6 +1029,8 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage }) {
 /* ================= ROOT ================= */
 export default function KirayApp() {
   const [role, setRole] = useState(null);
+  const [pendingRole, setPendingRole] = useState(null); // role chosen, awaiting registration
+  const [account, setAccount] = useState(null);
   const [tab, setTab] = useState("browse");
   /* Chat state lives at the root so it survives role switches within a session.
      In production this is a database + real-time updates (e.g. Supabase/Firebase). */
@@ -884,11 +1044,25 @@ export default function KirayApp() {
       if (existing) {
         return prev.map((t) => t.id === id ? { ...t, messages: [...t.messages, msg] } : t);
       }
-      return [...prev, { id, listingId, tenant, tenantPhone: null, messages: [msg] }];
+      return [...prev, { id, listingId, tenant, tenantPhone: account?.method === "phone" ? account.contact : null, messages: [msg] }];
     });
   };
 
-  if (!role) return <RoleGate onPick={(r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); }} />;
+  const enterAs = (r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); setPendingRole(null); };
+
+  if (!role) {
+    if (pendingRole) {
+      return (
+        <AuthGate
+          role={pendingRole}
+          onBack={() => setPendingRole(null)}
+          onSkip={() => enterAs("tenant")}
+          onDone={(acct) => { setAccount(acct); enterAs(pendingRole); }}
+        />
+      );
+    }
+    return <RoleGate onPick={(r) => { if (account) { enterAs(r); } else { setPendingRole(r); } }} />;
+  }
 
   const tabsByRole = {
     tenant: [{ key: "browse", label: "Find a rental" }, { key: "saved", label: "Saved ❤" }],
@@ -898,10 +1072,10 @@ export default function KirayApp() {
 
   return (
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
-      <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} />
+      <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} />
       {role === "tenant"
-        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} />
-        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} />}
+        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} />
+        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
         Kiray · ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
       </footer>
