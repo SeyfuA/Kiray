@@ -1,4 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 /* ================= DESIGN TOKENS ================= */
 const T = {
@@ -19,8 +22,7 @@ const T = {
 const displayFont = "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif";
 const bodyFont = "'Segoe UI', system-ui, -apple-system, sans-serif";
 
-/* ================= LOCATION DATA =================
-   Region -> City (federal / regional / zonal capital) -> Neighbourhoods */
+/* ================= LOCATION DATA ================= */
 const LOCATIONS = [
   {
     region: "Addis Ababa",
@@ -106,51 +108,150 @@ const LOCATIONS = [
   },
 ];
 
-/* ================= MOCK LISTINGS ================= */
+/* ================= MOCK LISTINGS =================
+   Phone numbers are fictional placeholders. In production they come from
+   the lister's verified account. */
 const LISTINGS = [
-  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", price: 45000, beds: 2, size: 85, lister: "Broker", name: "Meskerem B.", owner: "Ato Dawit", verified: true, views: 214, jx: 0.6, jy: -0.4 },
-  { id: 2, title: "Ground-floor shop on main road", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Merkato", price: 60000, beds: null, size: 48, lister: "Owner", name: "W/ro Almaz", owner: null, verified: true, views: 158, jx: -0.8, jy: 0.2 },
-  { id: 3, title: "Studio near Megenagna roundabout", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Megenagna", price: 15000, beds: 1, size: 38, lister: "Broker", name: "Meskerem B.", owner: "W/ro Hanna", verified: true, views: 96, jx: 0.9, jy: 0.5 },
-  { id: 4, title: "Office floor, elevator building", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Kazanchis", price: 120000, beds: null, size: 220, lister: "Owner", name: "W/ro Almaz", owner: null, verified: true, views: 342, jx: -0.2, jy: -0.9 },
-  { id: 5, title: "3-bedroom villa with compound", city: "Addis Ababa", region: "Addis Ababa", hood: "CMC", type: "Residential", price: 80000, beds: 3, size: 180, lister: "Broker", name: "Meskerem B.", owner: "Ato Dawit", verified: true, views: 187, jx: 0.3, jy: 0.9 },
-  { id: 6, title: "Lake-view apartment, 2 bedrooms", type: "Residential", city: "Bahir Dar", region: "Amhara", hood: "Tana Lakeside", price: 18000, beds: 2, size: 90, lister: "Owner", name: "Ato Mulugeta", owner: null, verified: true, views: 73, jx: 0.4, jy: -0.5 },
-  { id: 7, title: "Café / restaurant space, Piassa corner", type: "Business", city: "Bahir Dar", region: "Amhara", hood: "Shum Abo", price: 35000, beds: null, size: 110, lister: "Broker", name: "Abay Brokers", owner: "Ato Kassahun", verified: false, views: 51, jx: -0.6, jy: 0.6 },
-  { id: 8, title: "1-bedroom near Hawassa University", type: "Residential", city: "Hawassa", region: "Sidama", hood: "Tabor", price: 9000, beds: 1, size: 45, lister: "Owner", name: "W/ro Tigist", owner: null, verified: true, views: 129, jx: 0.5, jy: 0.3 },
-  { id: 9, title: "Retail unit facing lakeside walkway", type: "Business", city: "Hawassa", region: "Sidama", hood: "Amora Gedel Lakeside", price: 28000, beds: null, size: 60, lister: "Broker", name: "Sidama Homes", owner: "Ato Bekele", verified: true, views: 88, jx: -0.4, jy: -0.6 },
-  { id: 10, title: "Family house with service quarter", type: "Residential", city: "Adama", region: "Oromia", hood: "Boku", price: 20000, beds: 3, size: 160, lister: "Broker", name: "Adama Link", owner: "W/ro Chaltu", verified: true, views: 64, jx: 0.7, jy: 0.1 },
-  { id: 11, title: "Warehouse near expressway exit", type: "Business", city: "Adama", region: "Oromia", hood: "Migira", price: 55000, beds: null, size: 400, lister: "Owner", name: "Oromia Logistics", owner: null, verified: true, views: 47, jx: -0.5, jy: 0.8 },
-  { id: 12, title: "2-bedroom apartment, Ayder", type: "Residential", city: "Mekelle", region: "Tigray", hood: "Ayder", price: 12000, beds: 2, size: 78, lister: "Owner", name: "Ato Gebre", owner: null, verified: false, views: 39, jx: 0.2, jy: -0.7 },
-  { id: 13, title: "Guesthouse compound in Jugol", type: "Business", city: "Harar", region: "Harari", hood: "Jugol (Old Town)", price: 40000, beds: 6, size: 300, lister: "Broker", name: "Harar Heritage", owner: "Ato Abdi", verified: true, views: 112, jx: -0.3, jy: 0.4 },
-  { id: 14, title: "Shop row unit, Kezira market", type: "Business", city: "Dire Dawa", region: "Dire Dawa", hood: "Kezira", price: 22000, beds: null, size: 35, lister: "Owner", name: "Ato Ahmed", owner: null, verified: true, views: 58, jx: 0.6, jy: 0.6 },
-  { id: 15, title: "New 1-bedroom, university area", type: "Residential", city: "Jigjiga", region: "Somali", hood: "University Area", price: 7000, beds: 1, size: 50, lister: "Owner", name: "Faysa A.", owner: null, verified: false, views: 25, jx: -0.7, jy: -0.3 },
-  { id: 16, title: "3-bedroom house, Ginjo", type: "Residential", city: "Jimma", region: "Oromia", hood: "Ginjo", price: 11000, beds: 3, size: 140, lister: "Broker", name: "Jimma Homes", owner: "Ato Tesfaye", verified: true, views: 71, jx: 0.1, jy: 0.8 },
+  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", lat: 9.012, lng: 38.786, price: 45000, beds: 2, size: 85, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 214, posted: "2026-07-11T08:30:00" },
+  { id: 2, title: "Ground-floor shop on main road", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Merkato", lat: 9.033, lng: 38.74, price: 60000, beds: null, size: 48, lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 158, posted: "2026-07-10T16:45:00" },
+  { id: 3, title: "Studio near Megenagna roundabout", type: "Residential", city: "Addis Ababa", region: "Addis Ababa", hood: "Megenagna", lat: 9.02, lng: 38.801, price: 15000, beds: 1, size: 38, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "W/ro Hanna", verified: true, views: 96, posted: "2026-07-09T11:20:00" },
+  { id: 4, title: "Office floor, elevator building", type: "Business", city: "Addis Ababa", region: "Addis Ababa", hood: "Kazanchis", lat: 9.018, lng: 38.77, price: 120000, beds: null, size: 220, lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 342, posted: "2026-07-06T09:00:00" },
+  { id: 5, title: "3-bedroom villa with compound", city: "Addis Ababa", region: "Addis Ababa", hood: "CMC", lat: 9.017, lng: 38.828, type: "Residential", price: 80000, beds: 3, size: 180, lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 187, posted: "2026-07-08T14:10:00" },
+  { id: 6, title: "Lake-view apartment, 2 bedrooms", type: "Residential", city: "Bahir Dar", region: "Amhara", hood: "Tana Lakeside", lat: 11.6, lng: 37.39, price: 18000, beds: 2, size: 90, lister: "Owner", name: "Ato Mulugeta", phone: "+251900000003", owner: null, verified: true, views: 73, posted: "2026-07-10T07:55:00" },
+  { id: 7, title: "Café / restaurant space, Piassa corner", type: "Business", city: "Bahir Dar", region: "Amhara", hood: "Shum Abo", lat: 11.585, lng: 37.383, price: 35000, beds: null, size: 110, lister: "Broker", name: "Abay Brokers", phone: "+251900000004", owner: "Ato Kassahun", verified: false, views: 51, posted: "2026-07-04T13:30:00" },
+  { id: 8, title: "1-bedroom near Hawassa University", type: "Residential", city: "Hawassa", region: "Sidama", hood: "Tabor", lat: 7.043, lng: 38.492, price: 9000, beds: 1, size: 45, lister: "Owner", name: "W/ro Tigist", phone: "+251900000005", owner: null, verified: true, views: 129, posted: "2026-07-11T06:15:00" },
+  { id: 9, title: "Retail unit facing lakeside walkway", type: "Business", city: "Hawassa", region: "Sidama", hood: "Amora Gedel Lakeside", lat: 7.058, lng: 38.463, price: 28000, beds: null, size: 60, lister: "Broker", name: "Sidama Homes", phone: "+251900000006", owner: "Ato Bekele", verified: true, views: 88, posted: "2026-07-07T10:40:00" },
+  { id: 10, title: "Family house with service quarter", type: "Residential", city: "Adama", region: "Oromia", hood: "Boku", lat: 8.55, lng: 39.255, price: 20000, beds: 3, size: 160, lister: "Broker", name: "Adama Link", phone: "+251900000007", owner: "W/ro Chaltu", verified: true, views: 64, posted: "2026-07-09T17:25:00" },
+  { id: 11, title: "Warehouse near expressway exit", type: "Business", city: "Adama", region: "Oromia", hood: "Migira", lat: 8.53, lng: 39.29, price: 55000, beds: null, size: 400, lister: "Owner", name: "Oromia Logistics", phone: "+251900000008", owner: null, verified: true, views: 47, posted: "2026-07-02T08:00:00" },
+  { id: 12, title: "2-bedroom apartment, Ayder", type: "Residential", city: "Mekelle", region: "Tigray", hood: "Ayder", lat: 13.497, lng: 39.483, price: 12000, beds: 2, size: 78, lister: "Owner", name: "Ato Gebre", phone: "+251900000009", owner: null, verified: false, views: 39, posted: "2026-07-05T12:50:00" },
+  { id: 13, title: "Guesthouse compound in Jugol", type: "Business", city: "Harar", region: "Harari", hood: "Jugol (Old Town)", lat: 9.311, lng: 42.137, price: 40000, beds: 6, size: 300, lister: "Broker", name: "Harar Heritage", phone: "+251900000010", owner: "Ato Abdi", verified: true, views: 112, posted: "2026-07-08T09:35:00" },
+  { id: 14, title: "Shop row unit, Kezira market", type: "Business", city: "Dire Dawa", region: "Dire Dawa", hood: "Kezira", lat: 9.593, lng: 41.866, price: 22000, beds: null, size: 35, lister: "Owner", name: "Ato Ahmed", phone: "+251900000011", owner: null, verified: true, views: 58, posted: "2026-07-10T15:05:00" },
+  { id: 15, title: "New 1-bedroom, university area", type: "Residential", city: "Jigjiga", region: "Somali", hood: "University Area", lat: 9.36, lng: 42.79, price: 7000, beds: 1, size: 50, lister: "Owner", name: "Faysa A.", phone: "+251900000012", owner: null, verified: false, views: 25, posted: "2026-07-03T18:20:00" },
+  { id: 16, title: "3-bedroom house, Ginjo", type: "Residential", city: "Jimma", region: "Oromia", hood: "Ginjo", lat: 7.678, lng: 36.834, price: 11000, beds: 3, size: 140, lister: "Broker", name: "Jimma Homes", phone: "+251900000013", owner: "Ato Tesfaye", verified: true, views: 71, posted: "2026-07-09T08:45:00" },
 ];
 
 /* Demo accounts: the landlord demo signs in as W/ro Almaz, the broker demo as Meskerem B. */
 const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
+const TENANT_ME = "You (visitor)";
 
-const INQUIRIES = [
-  { id: 1, listingId: 2, from: "Biniam G.", role: "Tenant", msg: "Is the shop still available? I run a mobile accessories business and can move in on Hamle 1.", when: "2h ago", phone: "+251 91 —" },
-  { id: 2, listingId: 4, from: "Selam Tech PLC", role: "Tenant", msg: "We are a 15-person software company. Could we visit the office floor this week?", when: "5h ago", phone: "+251 92 —" },
-  { id: 3, listingId: 4, from: "Hana M.", role: "Tenant", msg: "Is the price negotiable for a 2-year contract paid quarterly?", when: "1d ago", phone: "+251 93 —" },
-  { id: 4, listingId: 1, from: "Dawit A.", role: "Tenant", msg: "Does the rent include water and the condo service fee?", when: "3h ago", phone: "+251 94 —" },
-  { id: 5, listingId: 5, from: "Ruth & family", role: "Tenant", msg: "We'd like to view the villa Saturday morning. Is parking inside the compound?", when: "1d ago", phone: "+251 96 —" },
-  { id: 6, listingId: 3, from: "Yared K.", role: "Tenant", msg: "Student at AAU — is a 6-month contract possible?", when: "2d ago", phone: "+251 97 —" },
+/* ================= SEED CHAT THREADS =================
+   Each thread: { id: `${listingId}:${tenant}`, listingId, tenant, tenantPhone, messages: [{from, text, at}] }
+   from is "tenant" or "lister". */
+const SEED_CHATS = [
+  { id: "2:Biniam G.", listingId: 2, tenant: "Biniam G.", tenantPhone: "+251900000101", messages: [
+    { from: "tenant", text: "Is the shop still available? I run a mobile accessories business and can move in on Hamle 1.", at: "2026-07-11T07:10:00" },
+  ]},
+  { id: "4:Selam Tech PLC", listingId: 4, tenant: "Selam Tech PLC", tenantPhone: "+251900000102", messages: [
+    { from: "tenant", text: "We are a 15-person software company. Could we visit the office floor this week?", at: "2026-07-11T04:30:00" },
+  ]},
+  { id: "4:Hana M.", listingId: 4, tenant: "Hana M.", tenantPhone: "+251900000103", messages: [
+    { from: "tenant", text: "Is the price negotiable for a 2-year contract paid quarterly?", at: "2026-07-10T09:15:00" },
+    { from: "lister", text: "Selam Hana, for a 2-year contract we can discuss. Which floor size do you need?", at: "2026-07-10T11:40:00" },
+  ]},
+  { id: "1:Dawit A.", listingId: 1, tenant: "Dawit A.", tenantPhone: "+251900000104", messages: [
+    { from: "tenant", text: "Does the rent include water and the condo service fee?", at: "2026-07-11T06:00:00" },
+  ]},
+  { id: "5:Ruth & family", listingId: 5, tenant: "Ruth & family", tenantPhone: "+251900000105", messages: [
+    { from: "tenant", text: "We'd like to view the villa Saturday morning. Is parking inside the compound?", at: "2026-07-10T14:20:00" },
+  ]},
+  { id: "3:Yared K.", listingId: 3, tenant: "Yared K.", tenantPhone: "+251900000106", messages: [
+    { from: "tenant", text: "Student at AAU — is a 6-month contract possible?", at: "2026-07-09T16:45:00" },
+  ]},
 ];
 
-/* ================= MAP PROJECTION ================= */
-const MAP_W = 640, MAP_H = 520;
-const px = (lng) => ((lng - 33) / (48 - 33)) * MAP_W;
-const py = (lat) => ((15.0 - lat) / (15.0 - 3.4)) * MAP_H;
-const ETHIOPIA_OUTLINE = [
-  [14.85, 37.6], [14.4, 40.0], [12.5, 42.4], [11.1, 42.9], [10.9, 43.3],
-  [9.4, 46.2], [8.0, 48.0], [4.45, 45.0], [3.5, 41.9], [3.6, 39.5],
-  [4.45, 36.05], [5.4, 35.3], [6.6, 35.2], [7.6, 33.7], [9.5, 34.1],
-  [10.9, 34.95], [12.7, 36.1], [14.3, 36.45],
-].map(([lat, lng]) => `${px(lng).toFixed(1)},${py(lat).toFixed(1)}`).join(" ");
-
+/* ================= HELPERS ================= */
 const fmtETB = (n) => "ETB " + n.toLocaleString("en-US");
 const allCities = LOCATIONS.flatMap((r) => r.cities);
+const fmtPhone = (p) => p.replace("+251", "+251 ").replace(/(\d{3})(\d{3})(\d{3})$/, "$1 $2 $3");
+
+function timeAgo(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  if (d < 7) return `${d} day${d > 1 ? "s" : ""} ago`;
+  const w = Math.floor(d / 7);
+  if (w < 5) return `${w} week${w > 1 ? "s" : ""} ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function fullDate(iso) {
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/* ================= MAP (Leaflet + OpenStreetMap — free, no API key) ================= */
+const pinIcon = (color, selected) =>
+  L.divIcon({
+    className: "",
+    html: `<svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 1C7.8 1 2 6.6 2 13.6 2 23 15 39 15 39s13-16 13-25.4C28 6.6 22.2 1 15 1z"
+        fill="${color}" stroke="${selected ? "#152019" : "#ffffff"}" stroke-width="${selected ? 3 : 2}"/>
+      <circle cx="15" cy="13.5" r="4.5" fill="#ffffff"/>
+    </svg>`,
+    iconSize: [30, 40],
+    iconAnchor: [15, 38],
+    popupAnchor: [0, -34],
+  });
+
+function FitToResults({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.flyTo(points[0], 14, { duration: 0.8 });
+    } else {
+      map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 13 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(points)]);
+  return null;
+}
+
+function MapPanel({ results, selected, setSelected, subtitle }) {
+  const points = results.map((l) => [l.lat, l.lng]);
+  return (
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", position: "sticky", top: 12 }}>
+      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <strong style={{ fontFamily: displayFont, fontSize: 14 }}>Map view</strong>
+        <span style={{ fontSize: 11, color: T.mute }}>{subtitle || "OpenStreetMap — pins are approximate"}</span>
+      </div>
+      <MapContainer center={[9.02, 38.75]} zoom={6} scrollWheelZoom={true} style={{ height: 460, width: "100%" }}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <FitToResults points={points} />
+        {results.map((l) => (
+          <Marker
+            key={l.id}
+            position={[l.lat, l.lng]}
+            icon={pinIcon(l.type === "Business" ? T.gold : T.leaf, selected === l.id)}
+            eventHandlers={{ click: () => setSelected(selected === l.id ? null : l.id) }}
+          >
+            <Popup>
+              <div style={{ fontFamily: bodyFont, minWidth: 170 }}>
+                <strong style={{ fontSize: 13 }}>{l.title}</strong>
+                <div style={{ fontSize: 12, color: T.mute, margin: "2px 0" }}>{l.hood}, {l.city}</div>
+                <div style={{ fontSize: 13, color: T.forest, fontWeight: 700 }}>{fmtETB(l.price)}/mo</div>
+                <div style={{ fontSize: 11, color: T.mute }}>Posted {timeAgo(l.posted)}</div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+      <div style={{ display: "flex", gap: 16, padding: "8px 14px", fontSize: 11, color: T.mute, borderTop: `1px solid ${T.line}` }}>
+        <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: T.leaf, marginRight: 5 }} />Residential</span>
+        <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: T.gold, marginRight: 5 }} />Business</span>
+        <span style={{ marginLeft: "auto" }}>Tap a pin for details</span>
+      </div>
+    </section>
+  );
+}
 
 /* ================= SMALL PIECES ================= */
 function Chip({ children, active, onClick, small }) {
@@ -200,8 +301,109 @@ const inputStyle = {
   fontFamily: bodyFont, fontSize: 14, color: T.ink, background: "#fff", boxSizing: "border-box",
 };
 
-const btnPrimary = { padding: "8px 14px", borderRadius: 8, border: "none", background: T.forest, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" };
-const btnGhost = { padding: "8px 14px", borderRadius: 8, border: `1px solid ${T.forest}`, background: "#fff", color: T.forest, fontSize: 13, fontWeight: 600, cursor: "pointer" };
+const btnPrimary = { padding: "8px 14px", borderRadius: 8, border: "none", background: T.forest, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: bodyFont };
+const btnGhost = { padding: "8px 14px", borderRadius: 8, border: `1px solid ${T.forest}`, background: "#fff", color: T.forest, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: bodyFont };
+
+/* Call button — a real tel: link. On a phone it opens the dialer with the number ready. */
+function CallButton({ phone, label }) {
+  return (
+    <a href={`tel:${phone}`} style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
+      📞 {label || "Call / ደውል"}
+    </a>
+  );
+}
+
+/* ================= CHAT MODAL =================
+   me = "tenant" | "lister". Messages live in shared root state, so a message
+   sent as a tenant shows up in the landlord/broker Inquiries after switching roles. */
+function ChatModal({ thread, listing, me, onSend, onClose }) {
+  const [text, setText] = useState("");
+  const scrollRef = useRef(null);
+  const messages = thread?.messages || [];
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages.length]);
+
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    onSend(t);
+    setText("");
+  };
+
+  const other = me === "tenant" ? listing.name : thread.tenant;
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(21,32,25,.45)", zIndex: 1000,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: T.card, borderRadius: 16, width: "100%", maxWidth: 440,
+        display: "flex", flexDirection: "column", maxHeight: "85vh", overflow: "hidden",
+        boxShadow: "0 20px 50px rgba(0,0,0,.3)", fontFamily: bodyFont,
+      }}>
+        {/* Header */}
+        <div style={{ background: T.forest, color: "#fff", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: T.leaf, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15 }}>
+            {other.charAt(0)}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{other}</div>
+            <div style={{ fontSize: 11, opacity: 0.8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {listing.title} · {fmtETB(listing.price)}/mo
+            </div>
+          </div>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Messages */}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "14px 14px 6px", background: T.paper, minHeight: 220 }}>
+          {messages.length === 0 && (
+            <div style={{ textAlign: "center", color: T.mute, fontSize: 13, padding: "30px 10px" }}>
+              Start the conversation — ask about availability, viewing times, or the neighbourhood.
+            </div>
+          )}
+          {messages.map((m, i) => {
+            const isMine = m.from === me;
+            return (
+              <div key={i} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", marginBottom: 8 }}>
+                <div style={{
+                  maxWidth: "78%", padding: "8px 12px", fontSize: 13.5, lineHeight: 1.45,
+                  background: isMine ? T.forest : "#fff",
+                  color: isMine ? "#fff" : T.ink,
+                  border: isMine ? "none" : `1px solid ${T.line}`,
+                  borderRadius: isMine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                }}>
+                  {m.text}
+                  <div style={{ fontSize: 10, opacity: 0.65, marginTop: 3, textAlign: "right" }}>{timeAgo(m.at)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Prototype hint */}
+        <div style={{ padding: "6px 14px", fontSize: 11, color: T.mute, background: T.paper, borderTop: `1px dashed ${T.line}` }}>
+          💡 Prototype: messages are shared across roles in this session — send one, then "⇄ Switch role" to reply from the other side.
+        </div>
+
+        {/* Input */}
+        <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${T.line}`, background: T.card }}>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="Type a message… / መልእክት ይጻፉ…"
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button onClick={send} style={{ ...btnPrimary, padding: "10px 16px" }}>Send</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ================= ROLE SELECTION (first screen) ================= */
 function RoleGate({ onPick }) {
@@ -278,7 +480,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole }) {
 }
 
 /* ================= LISTING CARD (shared) ================= */
-function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode }) {
+function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, onChat }) {
   const isSel = selected === l.id;
   return (
     <article onClick={() => onSelect(isSel ? null : l.id)} style={{
@@ -293,7 +495,11 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode })
           {fmtETB(l.price)}<span style={{ fontSize: 11, color: T.mute, fontWeight: 400 }}>/mo</span>
         </strong>
       </div>
-      <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>{l.hood}, {l.city} · {l.region}</div>
+      <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
+        {l.hood}, {l.city} · {l.region}
+        <span style={{ margin: "0 6px" }}>·</span>
+        <span title={fullDate(l.posted)}>🕐 Posted {timeAgo(l.posted)}</span>
+      </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
         <TypeTag type={l.type} />
         {l.beds != null && <span style={{ color: T.mute }}>{l.beds} bed{l.beds > 1 ? "s" : ""}</span>}
@@ -315,55 +521,17 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode })
             {l.verified
               ? <span style={{ color: T.forest, fontSize: 12 }}>✓ ID verified</span>
               : <span style={{ color: T.danger, fontSize: 12 }}>unverified</span>}
+            <div style={{ fontSize: 12, color: T.mute, marginTop: 2 }}>
+              Posted on {fullDate(l.posted)} · 📱 {fmtPhone(l.phone)}
+            </div>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button style={btnPrimary}>Call / ደውል</button>
-            <button style={btnGhost}>Chat in app</button>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
+            <CallButton phone={l.phone} />
+            <button style={btnGhost} onClick={() => onChat && onChat(l)}>💬 Chat in app</button>
           </div>
         </div>
       )}
     </article>
-  );
-}
-
-/* ================= MAP PANEL (shared) ================= */
-function MapPanel({ results, city, onPickCity, selected, setSelected, subtitle }) {
-  return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", position: "sticky", top: 12 }}>
-      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <strong style={{ fontFamily: displayFont, fontSize: 14 }}>Map view</strong>
-        <span style={{ fontSize: 11, color: T.mute }}>{subtitle || "Prototype map — Google Maps SDK in production"}</span>
-      </div>
-      <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ width: "100%", display: "block", background: "#EFF4EE" }}>
-        <polygon points={ETHIOPIA_OUTLINE} fill="#DCE9DB" stroke={T.forest} strokeWidth="1.5" strokeLinejoin="round" opacity="0.9" />
-        {allCities.map((c) => (
-          <g key={c.name} opacity={city && city !== c.name ? 0.25 : 1} style={{ cursor: onPickCity ? "pointer" : "default" }}
-            onClick={() => onPickCity && onPickCity(c)}>
-            <circle cx={px(c.lng)} cy={py(c.lat)} r={c.tier.includes("Federal") ? 5 : 3.5} fill={T.forest} />
-            <text x={px(c.lng) + 7} y={py(c.lat) + 4} fontSize="10" fill={T.ink} fontFamily={bodyFont}>{c.name}</text>
-          </g>
-        ))}
-        {results.map((l) => {
-          const c = allCities.find((c) => c.name === l.city);
-          if (!c) return null;
-          const x = px(c.lng) + l.jx * 14, y = py(c.lat) + l.jy * 14;
-          const isSel = selected === l.id;
-          return (
-            <g key={l.id} style={{ cursor: "pointer" }} onClick={() => setSelected(isSel ? null : l.id)}>
-              <path d={`M ${x} ${y} m 0 -14 c -6 0 -9 4.5 -9 8.5 c 0 5 9 14 9 14 c 0 0 9 -9 9 -14 c 0 -4 -3 -8.5 -9 -8.5 z`}
-                fill={l.type === "Business" ? T.gold : T.leaf}
-                stroke={isSel ? T.ink : "#fff"} strokeWidth={isSel ? 2 : 1.2} />
-              <circle cx={x} cy={y - 6.5} r="2.6" fill="#fff" />
-            </g>
-          );
-        })}
-      </svg>
-      <div style={{ display: "flex", gap: 16, padding: "8px 14px", fontSize: 11, color: T.mute, borderTop: `1px solid ${T.line}` }}>
-        <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: T.leaf, marginRight: 5 }} />Residential</span>
-        <span><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: T.gold, marginRight: 5 }} />Business</span>
-        <span style={{ marginLeft: "auto" }}>Tap a city or a pin</span>
-      </div>
-    </section>
   );
 }
 
@@ -377,7 +545,7 @@ function PostForm({ role, onDone }) {
         <div style={{ fontSize: 40 }}>✓</div>
         <h2 style={{ fontFamily: displayFont, margin: "8px 0 6px" }}>Listing submitted</h2>
         <p style={{ color: T.mute, fontSize: 14, maxWidth: 380, margin: "0 auto" }}>
-          In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
+          Submitted {fullDate(new Date().toISOString())}. In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
         </p>
         <button onClick={onDone} style={{ ...btnPrimary, marginTop: 14, padding: "10px 18px" }}>View my listings</button>
       </div>
@@ -407,7 +575,7 @@ function PostForm({ role, onDone }) {
       <Field label="Title"><input style={inputStyle} placeholder="e.g. 2-bedroom apartment near stadium" /></Field>
       <Field label="Pin the exact location">
         <div style={{ border: `1px dashed ${T.line}`, borderRadius: 8, padding: 16, textAlign: "center", color: T.mute, fontSize: 13, background: T.paper }}>
-          📍 In production: draggable Google Maps pin + Places autocomplete
+          📍 In production: draggable map pin + address autocomplete
         </div>
       </Field>
       <button onClick={() => setPosted(true)} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: T.gold, color: T.ink, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
@@ -418,7 +586,7 @@ function PostForm({ role, onDone }) {
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab }) {
+function TenantApp({ tab, chats, sendMessage }) {
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
   const [hood, setHood] = useState(null);
@@ -426,17 +594,20 @@ function TenantApp({ tab }) {
   const [maxPrice, setMaxPrice] = useState(150000);
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState([1, 8]);
+  const [chatListing, setChatListing] = useState(null);
 
   const regionObj = LOCATIONS.find((r) => r.region === region);
   const cityObj = regionObj?.cities.find((c) => c.name === city);
 
-  const results = useMemo(() => LISTINGS.filter((l) =>
-    (!region || l.region === region) &&
-    (!city || l.city === city) &&
-    (!hood || l.hood === hood) &&
-    (ptype === "All" || l.type === ptype) &&
-    l.price <= maxPrice
-  ), [region, city, hood, ptype, maxPrice]);
+  const results = useMemo(() =>
+    LISTINGS.filter((l) =>
+      (!region || l.region === region) &&
+      (!city || l.city === city) &&
+      (!hood || l.hood === hood) &&
+      (ptype === "All" || l.type === ptype) &&
+      l.price <= maxPrice
+    ).sort((a, b) => new Date(b.posted) - new Date(a.posted)),
+    [region, city, hood, ptype, maxPrice]);
 
   const toggleSave = (id) => setSaved((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const clearFrom = (level) => {
@@ -446,23 +617,20 @@ function TenantApp({ tab }) {
     setSelected(null);
   };
 
-  if (tab === "saved") {
-    const savedListings = LISTINGS.filter((l) => saved.includes(l.id));
-    return (
-      <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 20px 50px" }}>
-        <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>Saved listings</h2>
-        <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>You'll get a notification if a saved listing's price changes or it's rented out.</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {savedListings.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>Nothing saved yet — tap the heart on any listing.</div>}
-          {savedListings.map((l) => (
-            <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const chatThread = chatListing ? chats.find((t) => t.listingId === chatListing.id && t.tenant === TENANT_ME) : null;
 
-  return (
+  const body = tab === "saved" ? (
+    <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 20px 50px" }}>
+      <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>Saved listings</h2>
+      <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>You'll get a notification if a saved listing's price changes or it's rented out.</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>Nothing saved yet — tap the heart on any listing.</div>}
+        {LISTINGS.filter((l) => saved.includes(l.id)).map((l) => (
+          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode onChat={setChatListing} />
+        ))}
+      </div>
+    </div>
+  ) : (
     <div style={{ maxWidth: 1180, margin: "0 auto", padding: "18px 20px 40px" }}>
       {/* Location ladder */}
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "16px 18px", marginBottom: 18 }}>
@@ -511,16 +679,12 @@ function TenantApp({ tab }) {
           <strong>{fmtETB(maxPrice)}/mo</strong>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 13, color: T.mute }}>
-          <strong style={{ color: T.ink }}>{results.length}</strong> listing{results.length !== 1 ? "s" : ""} found
+          <strong style={{ color: T.ink }}>{results.length}</strong> listing{results.length !== 1 ? "s" : ""} · newest first
         </span>
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1fr) minmax(320px, 1.1fr)", gap: 18, alignItems: "start" }}>
-        <MapPanel results={results} city={city} selected={selected} setSelected={setSelected}
-          onPickCity={(c) => {
-            setRegion(LOCATIONS.find((r) => r.cities.some((x) => x.name === c.name)).region);
-            setCity(c.name); setHood(null); setSelected(null);
-          }} />
+        <MapPanel results={results} selected={selected} setSelected={setSelected} />
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
@@ -529,55 +693,87 @@ function TenantApp({ tab }) {
           )}
           {results.map((l) => (
             <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected}
-              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode />
+              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode onChat={setChatListing} />
           ))}
         </section>
       </div>
     </div>
   );
+
+  return (
+    <>
+      {body}
+      {chatListing && (
+        <ChatModal
+          thread={chatThread}
+          listing={chatListing}
+          me="tenant"
+          onSend={(text) => sendMessage(chatListing.id, TENANT_ME, "tenant", text)}
+          onClose={() => setChatListing(null)}
+        />
+      )}
+    </>
+  );
 }
 
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
-function ManagerApp({ role, tab, setTab }) {
+function ManagerApp({ role, tab, setTab, chats, sendMessage }) {
   const me = DEMO[role];
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
-  const mine = LISTINGS.filter((l) => l.name === me);
-  const myInquiries = INQUIRIES.filter((q) => mine.some((l) => l.id === q.listingId));
+  const [openThreadId, setOpenThreadId] = useState(null);
+
+  const mine = LISTINGS.filter((l) => l.name === me).sort((a, b) => new Date(b.posted) - new Date(a.posted));
+  const myIds = mine.map((l) => l.id);
+  const myThreads = chats
+    .filter((t) => myIds.includes(t.listingId) && t.messages.length > 0)
+    .sort((a, b) => new Date(b.messages[b.messages.length - 1].at) - new Date(a.messages[a.messages.length - 1].at));
   const totalViews = mine.reduce((s, l) => s + l.views, 0);
 
+  const openThread = myThreads.find((t) => t.id === openThreadId);
+  const openListing = openThread ? LISTINGS.find((l) => l.id === openThread.listingId) : null;
+
+  let body;
   if (tab === "post") {
-    return (
+    body = (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "26px 20px 60px" }}>
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "22px 24px" }}>
           <PostForm role={role} onDone={() => setTab("listings")} />
         </div>
       </div>
     );
-  }
-
-  if (tab === "inquiries") {
-    return (
+  } else if (tab === "inquiries") {
+    body = (
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "22px 20px 50px" }}>
         <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>Tenant inquiries</h2>
         <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
           Reply fast — listings that respond within 2 hours rank higher in tenant search.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {myInquiries.map((q) => {
-            const l = LISTINGS.find((x) => x.id === q.listingId);
+          {myThreads.length === 0 && (
+            <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
+              No inquiries yet.
+            </div>
+          )}
+          {myThreads.map((t) => {
+            const l = LISTINGS.find((x) => x.id === t.listingId);
+            const last = t.messages[t.messages.length - 1];
+            const awaiting = last.from === "tenant";
             return (
-              <article key={q.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
+              <article key={t.id} style={{ background: T.card, border: `1px solid ${awaiting ? T.gold : T.line}`, borderRadius: 14, padding: "14px 16px" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-                  <strong style={{ fontSize: 14 }}>{q.from}</strong>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: T.blueSoft, color: T.blue }}>{q.role}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 12, color: T.mute }}>{q.when}</span>
+                  <strong style={{ fontSize: 14 }}>{t.tenant}</strong>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: T.blueSoft, color: T.blue }}>Tenant</span>
+                  {awaiting && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: T.goldSoft, color: "#8A6410" }}>awaiting reply</span>}
+                  <span style={{ marginLeft: "auto", fontSize: 12, color: T.mute }}>{timeAgo(last.at)}</span>
                 </div>
                 <div style={{ fontSize: 12, color: T.mute, margin: "3px 0 8px" }}>Re: {l.title} — {l.hood}, {l.city}</div>
-                <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.5 }}>{q.msg}</p>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={btnPrimary}>Reply in chat</button>
-                  <button style={btnGhost}>Call {q.phone}</button>
+                <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.5 }}>
+                  {last.from === "lister" && <em style={{ color: T.mute }}>You: </em>}{last.text}
+                </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button style={btnPrimary} onClick={() => setOpenThreadId(t.id)}>💬 Open chat ({t.messages.length})</button>
+                  {t.tenantPhone && <CallButton phone={t.tenantPhone} label={`Call ${fmtPhone(t.tenantPhone)}`} />}
                   {isBroker && <button style={{ ...btnGhost, marginLeft: "auto", borderColor: T.gold, color: "#8A6410" }}>Schedule viewing</button>}
                 </div>
               </article>
@@ -586,76 +782,89 @@ function ManagerApp({ role, tab, setTab }) {
         </div>
       </div>
     );
+  } else {
+    body = (
+      <div style={{ maxWidth: 980, margin: "0 auto", padding: "22px 20px 50px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+          <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: 0 }}>
+            {isBroker ? "My portfolio" : "My properties"}
+          </h2>
+          <span style={{ fontSize: 13, color: T.mute }}>Signed in as <strong>{me}</strong> <span style={{ color: T.forest }}>✓ verified</span></span>
+        </div>
+        <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
+          {isBroker ? "Listings you manage on behalf of owners. Owner details stay private to you." : "Listings you own and manage directly."}
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
+          {[
+            { n: mine.length, l: "Active listings" },
+            { n: totalViews, l: "Views this month" },
+            { n: myThreads.length, l: "Open inquiries" },
+            isBroker
+              ? { n: new Set(mine.map((x) => x.owner)).size, l: "Owner clients" }
+              : { n: mine.filter((x) => x.type === "Business").length, l: "Business units" },
+          ].map((s) => (
+            <div key={s.l} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, color: T.forest }}>{s.n}</div>
+              <div style={{ fontSize: 12, color: T.mute }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1.1fr) minmax(280px, 1fr)", gap: 18, alignItems: "start" }}>
+          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {mine.map((l) => {
+              const inq = myThreads.filter((t) => t.listingId === l.id).length;
+              return (
+                <article key={l.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                    <h3 style={{ margin: 0, fontFamily: displayFont, fontSize: 15, fontWeight: 700 }}>{l.title}</h3>
+                    <strong style={{ color: T.forest, whiteSpace: "nowrap", fontSize: 14.5 }}>{fmtETB(l.price)}/mo</strong>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
+                    {l.hood}, {l.city}
+                    <span style={{ margin: "0 6px" }}>·</span>
+                    <span title={fullDate(l.posted)}>🕐 Posted {timeAgo(l.posted)}</span>
+                    {isBroker && l.owner && <> · Owner: <strong style={{ color: T.ink }}>{l.owner}</strong> 🔒</>}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 12, color: T.mute, flexWrap: "wrap" }}>
+                    <TypeTag type={l.type} />
+                    <span>👁 {l.views} views</span>
+                    <span>✉ {inq} inquiries</span>
+                    <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                      <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12 }}>Edit</button>
+                      <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger }}>Mark rented</button>
+                    </span>
+                  </div>
+                  {isBroker && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${T.line}`, fontSize: 12, color: "#8A6410" }}>
+                      Commission on deal: <strong>1 month's rent — {fmtETB(l.price)}</strong>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+          <MapPanel results={mine} selected={selected} setSelected={setSelected}
+            subtitle={isBroker ? "Your managed portfolio" : "Your properties"} />
+        </div>
+      </div>
+    );
   }
 
-  /* Default tab: dashboard / my listings */
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: "22px 20px 50px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-        <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: 0 }}>
-          {isBroker ? "My portfolio" : "My properties"}
-        </h2>
-        <span style={{ fontSize: 13, color: T.mute }}>Signed in as <strong>{me}</strong> <span style={{ color: T.forest }}>✓ verified</span></span>
-      </div>
-      <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
-        {isBroker ? "Listings you manage on behalf of owners. Owner details stay private to you." : "Listings you own and manage directly."}
-      </p>
-
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
-        {[
-          { n: mine.length, l: "Active listings" },
-          { n: totalViews, l: "Views this month" },
-          { n: myInquiries.length, l: "Open inquiries" },
-          isBroker
-            ? { n: new Set(mine.map((x) => x.owner)).size, l: "Owner clients" }
-            : { n: mine.filter((x) => x.type === "Business").length, l: "Business units" },
-        ].map((s) => (
-          <div key={s.l} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "14px 16px" }}>
-            <div style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, color: T.forest }}>{s.n}</div>
-            <div style={{ fontSize: 12, color: T.mute }}>{s.l}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1.1fr) minmax(280px, 1fr)", gap: 18, alignItems: "start" }}>
-        {/* Listings management list */}
-        <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {mine.map((l) => {
-            const inq = INQUIRIES.filter((q) => q.listingId === l.id).length;
-            return (
-              <article key={l.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                  <h3 style={{ margin: 0, fontFamily: displayFont, fontSize: 15, fontWeight: 700 }}>{l.title}</h3>
-                  <strong style={{ color: T.forest, whiteSpace: "nowrap", fontSize: 14.5 }}>{fmtETB(l.price)}/mo</strong>
-                </div>
-                <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
-                  {l.hood}, {l.city}
-                  {isBroker && l.owner && <> · Owner: <strong style={{ color: T.ink }}>{l.owner}</strong> 🔒</>}
-                </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 12, color: T.mute, flexWrap: "wrap" }}>
-                  <TypeTag type={l.type} />
-                  <span>👁 {l.views} views</span>
-                  <span>✉ {inq} inquiries</span>
-                  <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                    <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12 }}>Edit</button>
-                    <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger }}>Mark rented</button>
-                  </span>
-                </div>
-                {isBroker && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${T.line}`, fontSize: 12, color: "#8A6410", background: "transparent" }}>
-                    Commission on deal: <strong>1 month's rent — {fmtETB(l.price)}</strong>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </section>
-        {/* Map of my portfolio */}
-        <MapPanel results={mine} city={null} selected={selected} setSelected={setSelected}
-          subtitle={isBroker ? "Your managed portfolio" : "Your properties"} />
-      </div>
-    </div>
+    <>
+      {body}
+      {openThread && openListing && (
+        <ChatModal
+          thread={openThread}
+          listing={openListing}
+          me="lister"
+          onSend={(text) => sendMessage(openThread.listingId, openThread.tenant, "lister", text)}
+          onClose={() => setOpenThreadId(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -663,6 +872,21 @@ function ManagerApp({ role, tab, setTab }) {
 export default function KirayApp() {
   const [role, setRole] = useState(null);
   const [tab, setTab] = useState("browse");
+  /* Chat state lives at the root so it survives role switches within a session.
+     In production this is a database + real-time updates (e.g. Supabase/Firebase). */
+  const [chats, setChats] = useState(SEED_CHATS);
+
+  const sendMessage = (listingId, tenant, from, text) => {
+    const msg = { from, text, at: new Date().toISOString() };
+    setChats((prev) => {
+      const id = `${listingId}:${tenant}`;
+      const existing = prev.find((t) => t.id === id);
+      if (existing) {
+        return prev.map((t) => t.id === id ? { ...t, messages: [...t.messages, msg] } : t);
+      }
+      return [...prev, { id, listingId, tenant, tenantPhone: null, messages: [msg] }];
+    });
+  };
 
   if (!role) return <RoleGate onPick={(r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); }} />;
 
@@ -676,10 +900,10 @@ export default function KirayApp() {
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
       <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} />
       {role === "tenant"
-        ? <TenantApp tab={tab} />
-        : <ManagerApp role={role} tab={tab} setTab={setTab} />}
+        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} />
+        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
-        Kiray · ኪራይ — prototype. Listings shown are sample data.
+        Kiray · ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
       </footer>
     </div>
   );
