@@ -485,15 +485,13 @@ function RoleGate({ onPick }) {
 }
 
 /* ================= REGISTRATION / SIGN IN =================
-   Prototype auth: register with phone or email. The verification code is
-   simulated — in production, send a real SMS OTP (e.g. AfroMessage/Twilio)
-   or an email link, and store accounts in a database with hashed sessions. */
+   Simple registration: users provide their name and a phone number or email.
+   No verification message is sent. In production, add a database (e.g.
+   Supabase) so accounts persist, and optionally add OTP verification later. */
 function AuthGate({ role, onDone, onSkip, onBack }) {
   const [method, setMethod] = useState("phone");
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
-  const [stage, setStage] = useState("form"); // form -> code
-  const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
@@ -501,15 +499,9 @@ function AuthGate({ role, onDone, onSkip, onBack }) {
     ? /^(\+251|0)9\d{8}$/.test(contact.replace(/[\s-]/g, ""))
     : /^\S+@\S+\.\S+$/.test(contact.trim());
 
-  const requestCode = () => {
+  const submit = () => {
     if (name.trim().length < 2) return setError("Please enter your full name.");
     if (!contactOk) return setError(method === "phone" ? "Enter a valid Ethiopian mobile, e.g. +251 9… or 09…" : "Enter a valid email address.");
-    setError("");
-    setStage("code");
-  };
-
-  const verify = () => {
-    if (code.trim().length < 4) return setError("Enter the 4-digit code (demo: any 4 digits work).");
     onDone({ name: name.trim(), method, contact: contact.trim() });
   };
 
@@ -522,44 +514,27 @@ function AuthGate({ role, onDone, onSkip, onBack }) {
           <button onClick={onBack} style={{ background: "none", border: "none", color: T.leaf, cursor: "pointer", fontSize: 13, padding: 0, textDecoration: "underline" }}>change</button>
         </div>
 
-        {stage === "form" ? (
-          <>
-            <Field label="Full name / ሙሉ ስም">
-              <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Selam Tesfaye" />
-            </Field>
-            <Field label="Register with">
-              <div style={{ display: "flex", gap: 8 }}>
-                <Chip active={method === "phone"} onClick={() => { setMethod("phone"); setContact(""); setError(""); }}>📱 Phone</Chip>
-                <Chip active={method === "email"} onClick={() => { setMethod("email"); setContact(""); setError(""); }}>✉️ Email</Chip>
-              </div>
-            </Field>
-            <Field label={method === "phone" ? "Mobile number" : "Email address"}>
-              <input style={inputStyle} value={contact} onChange={(e) => setContact(e.target.value)}
-                placeholder={method === "phone" ? "+251 9… or 09…" : "name@example.com"}
-                inputMode={method === "phone" ? "tel" : "email"} />
-            </Field>
-            {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
-            <button onClick={requestCode} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Send verification code</button>
-            {role === "tenant" && (
-              <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 14, width: "100%", textAlign: "center", textDecoration: "underline" }}>
-                Skip for now — browse as guest
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <p style={{ fontSize: 13.5, color: T.ink, margin: "0 0 4px" }}>We sent a code to <strong>{contact}</strong>.</p>
-            <p style={{ fontSize: 12, color: T.mute, margin: "0 0 14px" }}>Prototype — no real message is sent. Enter any 4 digits.</p>
-            <Field label="Verification code">
-              <input style={{ ...inputStyle, letterSpacing: 6, textAlign: "center", fontSize: 18 }} value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="••••" inputMode="numeric" />
-            </Field>
-            {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
-            <button onClick={verify} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Verify & continue</button>
-            <button onClick={() => { setStage("form"); setCode(""); setError(""); }} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 12, width: "100%", textAlign: "center", textDecoration: "underline" }}>
-              ← Change {method === "phone" ? "number" : "email"}
-            </button>
-          </>
+        <Field label="Full name / ሙሉ ስም">
+          <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Negus" />
+        </Field>
+        <Field label="Register with">
+          <div style={{ display: "flex", gap: 8 }}>
+            <Chip active={method === "phone"} onClick={() => { setMethod("phone"); setContact(""); setError(""); }}>📱 Phone</Chip>
+            <Chip active={method === "email"} onClick={() => { setMethod("email"); setContact(""); setError(""); }}>✉️ Email</Chip>
+          </div>
+        </Field>
+        <Field label={method === "phone" ? "Mobile number" : "Email address"}>
+          <input style={inputStyle} value={contact} onChange={(e) => setContact(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            placeholder={method === "phone" ? "+251 9… or 09…" : "name@example.com"}
+            inputMode={method === "phone" ? "tel" : "email"} />
+        </Field>
+        {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
+        <button onClick={submit} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Create account · ተመዝገብ</button>
+        {role === "tenant" && (
+          <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 14, width: "100%", textAlign: "center", textDecoration: "underline" }}>
+            Skip for now — browse as guest
+          </button>
         )}
       </div>
     </div>
