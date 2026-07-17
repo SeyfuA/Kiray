@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -113,7 +113,7 @@ const LOCATIONS = [
    placeholders. In production they come from the lister's verified account. */
 const LISTINGS = [
   /* --- Addis Ababa --- */
-  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", kind: "Condominium", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", lat: 9.012, lng: 38.786, price: 45000, beds: 2, size: 85, features: ["Furnished", "Private kitchen", "Own electric meter", "Parking"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 214, posted: "2026-07-11T08:30:00" },
+  { id: 1, title: "2-bedroom condominium, furnished", type: "Residential", kind: "Condominium", city: "Addis Ababa", region: "Addis Ababa", hood: "Bole Medhanealem", lat: 9.012, lng: 38.786, price: 45000, beds: 2, size: 85, features: ["Ceramic floor", "Furnished", "Private kitchen", "Own electric meter", "Parking"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "Ato Dawit", verified: true, views: 214, posted: "2026-07-11T08:30:00" },
   { id: 2, title: "Ground-floor shop on main road", type: "Business", kind: "Shop", city: "Addis Ababa", region: "Addis Ababa", hood: "Merkato", lat: 9.033, lng: 38.74, price: 60000, beds: null, size: 48, features: ["Main-road frontage", "Own electric meter"], lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 158, posted: "2026-07-10T16:45:00" },
   { id: 3, title: "Studio near Megenagna roundabout", type: "Residential", kind: "Studio", city: "Addis Ababa", region: "Addis Ababa", hood: "Megenagna", lat: 9.02, lng: 38.801, price: 15000, beds: 1, size: 38, features: ["Private bathroom", "Water tank"], lister: "Broker", name: "Meskerem B.", phone: "+251900000001", owner: "W/ro Hanna", verified: true, views: 96, posted: "2026-07-09T11:20:00" },
   { id: 4, title: "Office floor, elevator building", type: "Business", kind: "Office", city: "Addis Ababa", region: "Addis Ababa", hood: "Kazanchis", lat: 9.018, lng: 38.77, price: 120000, beds: null, size: 220, features: ["Elevator", "Backup generator", "Parking", "Guarded compound"], lister: "Owner", name: "W/ro Almaz", phone: "+251900000002", owner: null, verified: true, views: 342, posted: "2026-07-06T09:00:00" },
@@ -123,13 +123,13 @@ const LISTINGS = [
   { id: 7, title: "Café / restaurant space, Piassa corner", type: "Business", kind: "Café / restaurant", city: "Bahir Dar", region: "Amhara", hood: "Shum Abo", lat: 11.585, lng: 37.383, price: 35000, beds: null, size: 110, features: ["Corner location", "Customer parking"], lister: "Broker", name: "Abay Brokers", phone: "+251900000004", owner: "Ato Kassahun", verified: false, views: 51, posted: "2026-07-04T13:30:00" },
   { id: 20, title: "Shop facing Piassa square", type: "Business", kind: "Shop", city: "Gondar", region: "Amhara", hood: "Piassa", lat: 12.606, lng: 37.466, price: 12000, beds: null, size: 28, features: ["High foot traffic", "Own electric meter"], lister: "Owner", name: "Ato Yohannes", phone: "+251900000017", owner: null, verified: true, views: 55, posted: "2026-07-08T10:20:00" },
   { id: 21, title: "2 rooms in shared compound", type: "Residential", kind: "Room in shared compound", city: "Dessie", region: "Amhara", hood: "Segno Gebeya", lat: 11.125, lng: 39.632, price: 4500, beds: 2, size: 35, features: ["Shared bathroom", "Private kitchen"], lister: "Owner", name: "W/ro Fatuma", phone: "+251900000018", owner: null, verified: true, views: 29, posted: "2026-07-06T15:40:00" },
-  { id: 22, title: "1-bedroom apartment near university", type: "Residential", kind: "Apartment", city: "Debre Birhan", region: "Amhara", hood: "Piassa", lat: 9.679, lng: 39.526, price: 6000, beds: 1, size: 42, features: ["Private bathroom", "Own electric meter"], lister: "Broker", name: "Semen Shewa Link", phone: "+251900000019", owner: "Ato Getachew", verified: true, views: 38, posted: "2026-07-10T09:10:00" },
+  { id: 22, title: "1-bedroom apartment near university", type: "Residential", kind: "Apartment", city: "Debre Birhan", region: "Amhara", hood: "Piassa", lat: 9.679, lng: 39.526, price: 6000, beds: 1, size: 42, features: ["Ceramic floor", "Private bathroom", "Own electric meter"], lister: "Broker", name: "Semen Shewa Link", phone: "+251900000019", owner: "Ato Getachew", verified: true, views: 38, posted: "2026-07-10T09:10:00" },
   { id: 23, title: "Shop on the main road", type: "Business", kind: "Shop", city: "Debre Markos", region: "Amhara", hood: "Piassa", lat: 10.334, lng: 37.724, price: 7000, beds: null, size: 25, features: ["Main-road frontage"], lister: "Owner", name: "Ato Molla", phone: "+251900000020", owner: null, verified: false, views: 18, posted: "2026-07-05T11:00:00" },
   /* --- Oromia --- */
   { id: 10, title: "Family house with service quarter", type: "Residential", kind: "Villa / private house", city: "Adama", region: "Oromia", hood: "Boku", lat: 8.55, lng: 39.255, price: 20000, beds: 3, size: 160, features: ["Service quarter", "Parking", "Guarded compound"], lister: "Broker", name: "Adama Link", phone: "+251900000007", owner: "W/ro Chaltu", verified: true, views: 64, posted: "2026-07-09T17:25:00" },
   { id: 11, title: "Warehouse near expressway exit", type: "Business", kind: "Warehouse", city: "Adama", region: "Oromia", hood: "Migira", lat: 8.53, lng: 39.29, price: 55000, beds: null, size: 400, features: ["Truck access", "24hr guard"], lister: "Owner", name: "Oromia Logistics", phone: "+251900000008", owner: null, verified: true, views: 47, posted: "2026-07-02T08:00:00" },
   { id: 16, title: "3-bedroom house, Ginjo", type: "Residential", kind: "Villa / private house", city: "Jimma", region: "Oromia", hood: "Ginjo", lat: 7.678, lng: 36.834, price: 11000, beds: 3, size: 140, features: ["Large compound", "Parking", "Water tank"], lister: "Broker", name: "Jimma Homes", phone: "+251900000013", owner: "Ato Tesfaye", verified: true, views: 71, posted: "2026-07-09T08:45:00" },
-  { id: 17, title: "2-bedroom apartment near Babogaya lake", type: "Residential", kind: "Apartment", city: "Bishoftu", region: "Oromia", hood: "Babogaya", lat: 8.766, lng: 38.99, price: 14000, beds: 2, size: 75, features: ["Balcony", "Lake view", "Own electric meter"], lister: "Owner", name: "Ato Solomon", phone: "+251900000014", owner: null, verified: true, views: 42, posted: "2026-07-10T12:00:00" },
+  { id: 17, title: "2-bedroom apartment near Babogaya lake", type: "Residential", kind: "Apartment", city: "Bishoftu", region: "Oromia", hood: "Babogaya", lat: 8.766, lng: 38.99, price: 14000, beds: 2, size: 75, features: ["Ceramic floor", "Balcony", "Lake view", "Own electric meter"], lister: "Owner", name: "Ato Solomon", phone: "+251900000014", owner: null, verified: true, views: 42, posted: "2026-07-10T12:00:00" },
   { id: 18, title: "1 room in shared compound", type: "Residential", kind: "Room in shared compound", city: "Shashemene", region: "Oromia", hood: "Arada", lat: 7.204, lng: 38.594, price: 3500, beds: 1, size: 20, features: ["Shared bathroom", "Water tank"], lister: "Owner", name: "W/ro Zewditu", phone: "+251900000015", owner: null, verified: false, views: 31, posted: "2026-07-09T13:15:00" },
   { id: 19, title: "2-room house with small compound", type: "Residential", kind: "Villa / private house", city: "Nekemte", region: "Oromia", hood: "Darge", lat: 9.086, lng: 36.54, price: 6000, beds: 2, size: 60, features: ["Private kitchen", "Water tank"], lister: "Broker", name: "Wallaga Homes", phone: "+251900000016", owner: "Ato Gemechu", verified: true, views: 22, posted: "2026-07-07T16:30:00" },
   /* --- Tigray --- */
@@ -165,8 +165,11 @@ const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
 const TENANT_ME = "You (visitor)";
 
 /* Options for the posting form */
-const PROPERTY_KINDS = ["Room in shared compound", "Condominium", "Apartment", "Studio", "Villa / private house", "Shop", "Office", "Warehouse", "Guesthouse", "Café / restaurant"];
-const FEATURE_OPTIONS = ["Private bathroom", "Shared bathroom", "Private kitchen", "Water tank", "Own electric meter", "Furnished", "Parking", "Guarded compound", "Balcony", "Backup generator"];
+const PROPERTY_KINDS = {
+  Residential: ["Room in shared compound", "Condominium", "Apartment", "Studio", "Villa / private house", "Other"],
+  Business: ["Shop", "Office", "Warehouse", "Café / restaurant", "Guesthouse", "Other"],
+};
+const FEATURE_OPTIONS = ["Ceramic floor", "Cement floor", "Private bathroom", "Shared bathroom", "Private kitchen", "Water tank", "Own electric meter", "Furnished", "Parking", "Guarded compound", "Balcony", "Backup generator"];
 
 /* ================= SEED CHAT THREADS =================
    Each thread: { id: `${listingId}:${tenant}`, listingId, tenant, tenantPhone, messages: [{from, text, at}] }
@@ -638,19 +641,72 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
 }
 
 /* ================= POST FORM (landlord & broker) ================= */
+/* Helpers for the live location picker */
+function ClickToPlace({ onPick }) {
+  useMapEvents({ click: (e) => onPick({ lat: e.latlng.lat, lng: e.latlng.lng }) });
+  return null;
+}
+function FlyTo({ pos, trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pos) map.flyTo([pos.lat, pos.lng], 17, { duration: 0.8 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
+  return null;
+}
+
 function PostForm({ role, onDone, account }) {
   const [posted, setPosted] = useState(false);
-  const [kind, setKind] = useState("Apartment");
+  const [ptype, setPtype] = useState("Residential");
+  const [kind, setKind] = useState(PROPERTY_KINDS.Residential[0]);
+  const [regionSel, setRegionSel] = useState(LOCATIONS[0].region);
+  const [citySel, setCitySel] = useState(LOCATIONS[0].cities[0].name);
   const [feat, setFeat] = useState([]);
+  const [coords, setCoords] = useState(null);      // { lat, lng } of the property
+  const [confirmed, setConfirmed] = useState(false); // lister confirmed the pin
+  const [geoMsg, setGeoMsg] = useState("");
+  const [geoTrigger, setGeoTrigger] = useState(0);
+  const [formErr, setFormErr] = useState("");
   const isBroker = role === "broker";
   const toggleFeat = (f) => setFeat((s) => s.includes(f) ? s.filter((x) => x !== f) : [...s, f]);
+  const regionCities = (LOCATIONS.find((r) => r.region === regionSel) || LOCATIONS[0]).cities;
+  const cityObj = regionCities.find((c) => c.name === citySel) || regionCities[0];
+  const pickType = (t) => { setPtype(t); setKind(PROPERTY_KINDS[t][0]); };
+  const pickRegion = (r) => {
+    setRegionSel(r);
+    setCitySel(LOCATIONS.find((x) => x.region === r).cities[0].name);
+  };
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) return setGeoMsg("Location is not supported in this browser — tap the map to place the pin manually.");
+    setGeoMsg("Getting your location…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setConfirmed(false);
+        setGeoMsg("");
+        setGeoTrigger((t) => t + 1);
+      },
+      (err) => setGeoMsg(err.code === 1
+        ? "Location permission denied — tap the map to place the pin manually."
+        : "Couldn't get a GPS fix — tap the map to place the pin manually."),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+
+  const submitListing = () => {
+    if (!coords) return setFormErr("Set the property location: tap “Use my current location” or tap the map to place the pin.");
+    if (!confirmed) return setFormErr("Please confirm that the pin marks the actual location of the property.");
+    setFormErr("");
+    setPosted(true);
+  };
   if (posted) {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
         <div style={{ fontSize: 40 }}>✓</div>
         <h2 style={{ fontFamily: displayFont, margin: "8px 0 6px" }}>Listing submitted</h2>
         <p style={{ color: T.mute, fontSize: 14, maxWidth: 380, margin: "0 auto" }}>
-          Submitted {fullDate(new Date().toISOString())}. In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
+          Submitted {fullDate(new Date().toISOString())}{coords ? <> with location pin confirmed at <strong>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</strong></> : ""}. In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
         </p>
         <button onClick={onDone} style={{ ...btnPrimary, marginTop: 14, padding: "10px 18px" }}>View my listings</button>
       </div>
@@ -672,10 +728,15 @@ function PostForm({ role, onDone, account }) {
           <Field label="Your commission"><select style={inputStyle}><option>1 month's rent (standard)</option><option>Half month's rent</option><option>Custom agreement</option></select></Field>
         </div>
       )}
-      <Field label="Property type"><div style={{ display: "flex", gap: 8 }}><Chip active>Residential</Chip><Chip>Business</Chip></div></Field>
+      <Field label="Property type">
+        <div style={{ display: "flex", gap: 8 }}>
+          <Chip active={ptype === "Residential"} onClick={() => pickType("Residential")}>Residential · መኖሪያ</Chip>
+          <Chip active={ptype === "Business"} onClick={() => pickType("Business")}>Business · ንግድ</Chip>
+        </div>
+      </Field>
       <Field label="Kind of property">
         <select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}>
-          {PROPERTY_KINDS.map((k) => <option key={k}>{k}</option>)}
+          {PROPERTY_KINDS[ptype].map((k) => <option key={k}>{k}</option>)}
         </select>
       </Field>
       <Field label="Number of rooms">
@@ -683,6 +744,20 @@ function PostForm({ role, onDone, account }) {
           <option>1 room</option><option>2 rooms</option><option>3 rooms</option><option>4 rooms</option><option>5+ rooms</option>
           <option>Not applicable (shop / office / warehouse)</option>
         </select>
+      </Field>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Field label="Floor">
+          <select style={inputStyle}>
+            <option>Ground floor</option><option>1st floor</option><option>2nd floor</option><option>3rd floor</option>
+            <option>4th floor</option><option>5th floor</option><option>6th floor or higher</option><option>Not applicable</option>
+          </select>
+        </Field>
+        <Field label="Block / building no. (optional)">
+          <input style={inputStyle} placeholder="e.g. Block B12" />
+        </Field>
+      </div>
+      <Field label="Area in square metres (m²)">
+        <input style={inputStyle} type="number" min="1" placeholder="e.g. 85" />
       </Field>
       <Field label="Features — select all that apply">
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -695,23 +770,57 @@ function PostForm({ role, onDone, account }) {
         <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }}
           placeholder="e.g. Ground floor, 2 rooms in a quiet shared compound near the bus station. Water comes daily, separate electric meter, 10 minutes walk to the market…" />
       </Field>
-      <Field label="Region"><select style={inputStyle}>{LOCATIONS.map((r) => <option key={r.region}>{r.region}</option>)}</select></Field>
-      <Field label="City"><select style={inputStyle}>{allCities.map((c) => <option key={c.name}>{c.name} — {c.tier}</option>)}</select></Field>
-      <Field label="Neighbourhood / ሰፈር"><input style={inputStyle} placeholder="e.g. Bole Medhanealem" /></Field>
+      <Field label="Region">
+        <select style={inputStyle} value={regionSel} onChange={(e) => pickRegion(e.target.value)}>
+          {LOCATIONS.map((r) => <option key={r.region} value={r.region}>{r.region}</option>)}
+        </select>
+      </Field>
+      <Field label="City / town">
+        <select style={inputStyle} value={citySel} onChange={(e) => setCitySel(e.target.value)}>
+          {regionCities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
+        </select>
+      </Field>
+      <Field label="Neighbourhood / ሰፈር">
+        <input style={inputStyle} placeholder={`e.g. ${cityObj.hoods[0]}`} list="hood-suggestions" />
+        <datalist id="hood-suggestions">
+          {cityObj.hoods.map((h) => <option key={h} value={h} />)}
+        </datalist>
+      </Field>
       <Field label="Monthly rent (ETB)"><input style={inputStyle} type="number" placeholder="e.g. 25000" /></Field>
-      <Field label="Title"><input style={inputStyle} placeholder="e.g. 2-bedroom apartment near stadium" /></Field>
+      <Field label="Title"><input style={inputStyle} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
       <Field label="Contact phone for this listing (optional)">
         <input style={inputStyle} inputMode="tel" placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
           Leave empty to use your registered contact{account ? <> (<strong>{account.contact}</strong>)</> : ""}. Fill this only if tenants should reach you on a different number for this property.
         </div>
       </Field>
-      <Field label="Pin the exact location">
-        <div style={{ border: `1px dashed ${T.line}`, borderRadius: 8, padding: 16, textAlign: "center", color: T.mute, fontSize: 13, background: T.paper }}>
-          📍 In production: draggable map pin + address autocomplete
+      <Field label="Property location — set the pin">
+        <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button type="button" onClick={useMyLocation} style={{ ...btnPrimary, padding: "8px 12px" }}>📍 Use my current location</button>
+          <span style={{ fontSize: 12, color: T.mute }}>or tap the map to place the pin, then drag it to adjust</span>
         </div>
+        {geoMsg && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 8 }}>{geoMsg}</div>}
+        <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
+          <MapContainer center={[9.02, 38.75]} zoom={6} scrollWheelZoom style={{ height: 260, width: "100%" }}>
+            <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <ClickToPlace onPick={(c) => { setCoords(c); setConfirmed(false); }} />
+            <FlyTo pos={coords} trigger={geoTrigger} />
+            {coords && (
+              <Marker position={[coords.lat, coords.lng]} draggable icon={pinIcon(T.leaf, true)}
+                eventHandlers={{ dragend: (e) => { const p = e.target.getLatLng(); setCoords({ lat: p.lat, lng: p.lng }); setConfirmed(false); } }} />
+            )}
+          </MapContainer>
+        </div>
+        {coords && (
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 10, fontSize: 13, cursor: "pointer" }}>
+            <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>I confirm this pin is the actual location of the property <span style={{ color: T.mute }}>({coords.lat.toFixed(5)}, {coords.lng.toFixed(5)})</span></span>
+          </label>
+        )}
       </Field>
-      <button onClick={() => setPosted(true)} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: T.gold, color: T.ink, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+      {formErr && <div style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{formErr}</div>}
+      <button onClick={submitListing} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: T.gold, color: T.ink, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
         Submit for verification
       </button>
     </>
