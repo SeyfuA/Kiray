@@ -437,84 +437,38 @@ function RoleGate({ onPick }) {
   );
 }
 
-/* ================= SIGN IN WITH TELEGRAM =================
-   No forms, no passwords: users tap "Log in with Telegram" and we receive
-   their verified Telegram profile (id, name, username, photo). The signature
-   is verified server-side in api/telegram-auth.js using the bot token.
-   Requires the site domain to be registered with @BotFather via /setdomain. */
-const TELEGRAM_BOT_USERNAME = "KirrayAppBot";
-
-function AuthGate({ role, onDone, onSkip, onBack }) {
-  const widgetRef = useRef(null);
-  const [error, setError] = useState("");
-  const [verifying, setVerifying] = useState(false);
-
-  const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
-
+/* ================= TELEGRAM PROFILE PICKUP =================
+   No sign-in screens anywhere. When the app is opened inside Telegram
+   (via the bot's "Open Kiray" button), Telegram supplies the visitor's
+   profile automatically; we verify it server-side (api/telegram-webapp-auth.js)
+   and use it as the account. Opened in a normal browser, everyone is simply
+   a guest — no credentials requested. */
+function useTelegramProfile(setAccount) {
   useEffect(() => {
-    window.onTelegramAuth = async (user) => {
-      setVerifying(true);
-      setError("");
-      try {
-        const res = await fetch("/api/telegram-auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || "verification failed");
-        const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
-        onDone({
-          name: fullName || (user.username ? "@" + user.username : "Telegram user"),
+    const tg = window.Telegram?.WebApp;
+    if (!tg || !tg.initData) return; // normal browser visit → guest
+    tg.ready();
+    tg.expand();
+    fetch("/api/telegram-webapp-auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || !data.user) return; // verification failed → stay guest
+        const u = data.user;
+        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ");
+        setAccount({
+          name: fullName || (u.username ? "@" + u.username : "Telegram user"),
           method: "telegram",
-          contact: user.username ? "@" + user.username : "Telegram",
-          telegramId: user.id,
-          photo: user.photo_url || null,
+          contact: u.username ? "@" + u.username : "Telegram",
+          telegramId: u.id,
+          photo: u.photo_url || null,
         });
-      } catch (e) {
-        setVerifying(false);
-        setError("Could not verify the Telegram login. Please try again.");
-      }
-    };
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "10");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-    widgetRef.current?.appendChild(script);
-    return () => { delete window.onTelegramAuth; };
-  }, []);
-
-  return (
-    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont }}>
-      <div style={{ background: T.card, borderRadius: 16, padding: "26px 26px 22px", width: "100%", maxWidth: 400, boxShadow: "0 10px 30px rgba(0,0,0,.25)", textAlign: "center" }}>
-        <div style={{ fontFamily: displayFont, fontSize: 23, fontWeight: 700, color: T.forest }}>Sign in to Kiray</div>
-        <div style={{ fontSize: 13, color: T.mute, margin: "4px 0 20px" }}>
-          Continuing as <strong>{roleLabel}</strong>{" · "}
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.leaf, cursor: "pointer", fontSize: 13, padding: 0, textDecoration: "underline" }}>change</button>
-        </div>
-
-        <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55, marginBottom: 18 }}>
-          Use your Telegram account — no forms, no passwords. Your name and username come straight from your profile, and listers can reach you on Telegram.
-        </div>
-
-        {/* Telegram renders its official button inside this container */}
-        <div ref={widgetRef} style={{ display: "flex", justifyContent: "center", minHeight: 46 }} />
-
-        {verifying && <div style={{ color: T.mute, fontSize: 12.5, marginTop: 12 }}>Verifying with Telegram…</div>}
-        {error && <div style={{ color: T.danger, fontSize: 12.5, marginTop: 12 }}>{error}</div>}
-
-        {role === "tenant" && (
-          <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 16, width: "100%", textAlign: "center", textDecoration: "underline" }}>
-            Skip for now — browse as guest
-          </button>
-        )}
-      </div>
-    </div>
-  );
+      })
+      .catch(() => {}); // network hiccup → stay guest
+  }, [setAccount]);
 }
 
 /* ================= SHARED HEADER ================= */
@@ -1089,9 +1043,11 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
 /* ================= ROOT ================= */
 export default function KirayApp() {
   const [role, setRole] = useState(null);
-  const [pendingRole, setPendingRole] = useState(null); // role chosen, awaiting registration
   const [account, setAccount] = useState(null);
   const [tab, setTab] = useState("browse");
+  /* Opened inside Telegram? Pick up the visitor's profile automatically.
+     Opened in a browser? Everyone is a guest — nothing is asked. */
+  useTelegramProfile(setAccount);
   /* Chat state lives at the root so it survives role switches within a session.
      In production this is a database + real-time updates (e.g. Supabase/Firebase). */
   const [chats, setChats] = useState(SEED_CHATS);
@@ -1108,20 +1064,10 @@ export default function KirayApp() {
     });
   };
 
-  const enterAs = (r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); setPendingRole(null); };
+  const enterAs = (r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); };
 
   if (!role) {
-    if (pendingRole) {
-      return (
-        <AuthGate
-          role={pendingRole}
-          onBack={() => setPendingRole(null)}
-          onSkip={() => enterAs("tenant")}
-          onDone={(acct) => { setAccount(acct); enterAs(pendingRole); }}
-        />
-      );
-    }
-    return <RoleGate onPick={(r) => { if (account) { enterAs(r); } else { setPendingRole(r); } }} />;
+    return <RoleGate onPick={enterAs} />;
   }
 
   const tabsByRole = {

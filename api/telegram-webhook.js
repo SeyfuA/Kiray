@@ -62,8 +62,10 @@ export default async function handler(req, res) {
   const chatId = msg.chat.id;
   const text = msg.text.trim();
   const appUrl = process.env.KIRAY_APP_URL;
+  // web_app (not url) opens Kiray INSIDE Telegram, so the app receives the
+  // visitor's profile automatically — no sign-in screens.
   const appButton = appUrl
-    ? { reply_markup: { inline_keyboard: [[{ text: "Open Kiray 🌍", url: appUrl }]] } }
+    ? { reply_markup: { inline_keyboard: [[{ text: "Open Kiray 🌍", web_app: { url: appUrl } }]] } }
     : {};
 
   try {
