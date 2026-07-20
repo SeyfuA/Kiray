@@ -91,6 +91,12 @@ function startKeyboard() {
   return { inline_keyboard: rows };
 }
 
+// Shown alongside every browsing screen (not just /start) so people can
+// jump to the full map-based app at any point, not only at the very top.
+function openAppRow() {
+  return APP_URL ? [{ text: "🌍 Open Web App", web_app: { url: APP_URL } }] : null;
+}
+
 /* ---------- Telegram API calls ---------- */
 
 async function sendMessage(chatId, text, extra = {}) {
@@ -113,6 +119,7 @@ async function sendRegionMenu(chatId) {
   const rows = getRegions().map((r, i) => [
     { text: `${r} (${countListings(r)})`, callback_data: `reg_${i}` },
   ]);
+  if (openAppRow()) rows.push(openAppRow());
   await sendMessage(chatId, "📍 Choose a region:", { reply_markup: { inline_keyboard: rows } });
 }
 
@@ -125,6 +132,7 @@ async function sendCityMenu(chatId, regionIdx) {
     { text: `${c} (${countListings(region, c)})`, callback_data: `city_${regionIdx}_${i}` },
   ]);
   rows.push([{ text: "⬅ Back to regions", callback_data: "back_regions" }]);
+  if (openAppRow()) rows.push(openAppRow());
   await sendMessage(chatId, `📍 <b>${region}</b> — choose a city or town:`, {
     reply_markup: { inline_keyboard: rows },
   });
@@ -155,6 +163,7 @@ async function sendCityListings(chatId, regionIdx, cityIdx) {
       inline_keyboard: [
         [{ text: "⬅ Back to cities", callback_data: `back_cities_${regionIdx}` }],
         [{ text: "📍 Back to regions", callback_data: "back_regions" }],
+        ...(openAppRow() ? [openAppRow()] : []),
       ],
     },
   });
@@ -186,7 +195,8 @@ async function sendTopListings(chatId, query = "") {
   }
   await sendMessage(
     chatId,
-    "🔎 Narrow it down: /listings <city, neighbourhood, or type> — e.g. /listings Bole"
+    "🔎 Narrow it down: /listings <city, neighbourhood, or type> — e.g. /listings Bole",
+    openAppRow() ? { reply_markup: { inline_keyboard: [openAppRow()] } } : {}
   );
 }
 

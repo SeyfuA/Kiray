@@ -861,8 +861,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
         </span>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1fr) minmax(320px, 1.1fr)", gap: 18, alignItems: "start" }}>
-        <MapPanel results={results} selected={selected} setSelected={setSelected} />
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1.1fr) minmax(300px, 1fr)", gap: 18, alignItems: "start" }}>
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
@@ -874,6 +873,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
               saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode onChat={setChatListing} />
           ))}
         </section>
+        <MapPanel results={results} selected={selected} setSelected={setSelected} />
       </div>
     </div>
   );
