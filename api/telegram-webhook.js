@@ -49,6 +49,20 @@ function findListing(id) {
   return LISTINGS.find((l) => l.id === Number(id));
 }
 
+// Region -> city/town hierarchy, derived straight from the listings data
+// (so it's always in sync — no separate list to maintain).
+function getRegions() {
+  return [...new Set(LISTINGS.map((l) => l.region))].sort((a, b) => a.localeCompare(b));
+}
+function getCities(region) {
+  return [...new Set(LISTINGS.filter((l) => l.region === region).map((l) => l.city))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+}
+function countListings(region, city) {
+  return LISTINGS.filter((l) => l.region === region && (!city || l.city === city)).length;
+}
+
 /* ---------- formatting ---------- */
 
 function formatListing(l) {
@@ -92,6 +106,57 @@ async function answerCallbackQuery(id, options = {}) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ callback_query_id: id, ...options }),
+  });
+}
+
+async function sendRegionMenu(chatId) {
+  const rows = getRegions().map((r, i) => [
+    { text: `${r} (${countListings(r)})`, callback_data: `reg_${i}` },
+  ]);
+  await sendMessage(chatId, "📍 Choose a region:", { reply_markup: { inline_keyboard: rows } });
+}
+
+async function sendCityMenu(chatId, regionIdx) {
+  const regions = getRegions();
+  const region = regions[regionIdx];
+  if (!region) return sendRegionMenu(chatId);
+
+  const rows = getCities(region).map((c, i) => [
+    { text: `${c} (${countListings(region, c)})`, callback_data: `city_${regionIdx}_${i}` },
+  ]);
+  rows.push([{ text: "⬅ Back to regions", callback_data: "back_regions" }]);
+  await sendMessage(chatId, `📍 <b>${region}</b> — choose a city or town:`, {
+    reply_markup: { inline_keyboard: rows },
+  });
+}
+
+async function sendCityListings(chatId, regionIdx, cityIdx) {
+  const regions = getRegions();
+  const region = regions[regionIdx];
+  if (!region) return sendRegionMenu(chatId);
+  const cities = getCities(region);
+  const city = cities[cityIdx];
+  if (!city) return sendCityMenu(chatId, regionIdx);
+
+  const results = rankListings(LISTINGS.filter((l) => l.region === region && l.city === city));
+  const shown = results.slice(0, TOP_COUNT);
+
+  await sendMessage(
+    chatId,
+    `🏙 <b>${city}, ${region}</b> — ${results.length} listing${results.length !== 1 ? "s" : ""}${
+      results.length > shown.length ? ` (showing ${shown.length})` : ""
+    }:`
+  );
+  for (const l of shown) {
+    await sendMessage(chatId, formatListing(l), { reply_markup: listingKeyboard(l) });
+  }
+  await sendMessage(chatId, "Want another area?", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "⬅ Back to cities", callback_data: `back_cities_${regionIdx}` }],
+        [{ text: "📍 Back to regions", callback_data: "back_regions" }],
+      ],
+    },
   });
 }
 
@@ -166,9 +231,21 @@ export default async function handler(req, res) {
       const chatId = cq.message?.chat?.id;
       const data = cq.data || "";
 
-      if (data === "browse") {
+      if (data === "browse" || data === "back_regions") {
         await answerCallbackQuery(cq.id);
-        if (chatId) await sendTopListings(chatId);
+        if (chatId) await sendRegionMenu(chatId);
+      } else if (data.startsWith("back_cities_")) {
+        const regionIdx = Number(data.replace("back_cities_", ""));
+        await answerCallbackQuery(cq.id);
+        if (chatId) await sendCityMenu(chatId, regionIdx);
+      } else if (data.startsWith("reg_")) {
+        const regionIdx = Number(data.replace("reg_", ""));
+        await answerCallbackQuery(cq.id);
+        if (chatId) await sendCityMenu(chatId, regionIdx);
+      } else if (data.startsWith("city_")) {
+        const [, regionIdx, cityIdx] = data.split("_");
+        await answerCallbackQuery(cq.id);
+        if (chatId) await sendCityListings(chatId, Number(regionIdx), Number(cityIdx));
       } else if (data.startsWith("contact_")) {
         await answerCallbackQuery(cq.id);
         if (chatId) await sendContactCard(chatId, findListing(data.replace("contact_", "")));
@@ -204,6 +281,7 @@ export default async function handler(req, res) {
         [
           "<b>How to use Kiray</b>",
           "",
+          "• /start — browse by region, then city or town",
           "• /listings — top listings right now",
           "• /listings Hawassa — search by city",
           "• /listings Piassa — search by neighbourhood",
