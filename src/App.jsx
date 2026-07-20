@@ -437,55 +437,78 @@ function RoleGate({ onPick }) {
   );
 }
 
-/* ================= REGISTRATION / SIGN IN =================
-   Simple registration: users provide their name and a phone number or email.
-   No verification message is sent. In production, add a database (e.g.
-   Supabase) so accounts persist, and optionally add OTP verification later. */
+/* ================= SIGN IN WITH TELEGRAM =================
+   No forms, no passwords: users tap "Log in with Telegram" and we receive
+   their verified Telegram profile (id, name, username, photo). The signature
+   is verified server-side in api/telegram-auth.js using the bot token.
+   Requires the site domain to be registered with @BotFather via /setdomain. */
+const TELEGRAM_BOT_USERNAME = "KirrayAppBot";
+
 function AuthGate({ role, onDone, onSkip, onBack }) {
-  const [method, setMethod] = useState("phone");
-  const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const widgetRef = useRef(null);
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
-  const contactOk = method === "phone"
-    ? /^(\+251|0)9\d{8}$/.test(contact.replace(/[\s-]/g, ""))
-    : /^\S+@\S+\.\S+$/.test(contact.trim());
 
-  const submit = () => {
-    if (name.trim().length < 2) return setError("Please enter your full name.");
-    if (!contactOk) return setError(method === "phone" ? "Enter a valid Ethiopian mobile, e.g. +251 9… or 09…" : "Enter a valid email address.");
-    onDone({ name: name.trim(), method, contact: contact.trim() });
-  };
+  useEffect(() => {
+    window.onTelegramAuth = async (user) => {
+      setVerifying(true);
+      setError("");
+      try {
+        const res = await fetch("/api/telegram-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "verification failed");
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+        onDone({
+          name: fullName || (user.username ? "@" + user.username : "Telegram user"),
+          method: "telegram",
+          contact: user.username ? "@" + user.username : "Telegram",
+          telegramId: user.id,
+          photo: user.photo_url || null,
+        });
+      } catch (e) {
+        setVerifying(false);
+        setError("Could not verify the Telegram login. Please try again.");
+      }
+    };
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.async = true;
+    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "10");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    script.setAttribute("data-request-access", "write");
+    widgetRef.current?.appendChild(script);
+    return () => { delete window.onTelegramAuth; };
+  }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: T.forest, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont }}>
-      <div style={{ background: T.card, borderRadius: 16, padding: "26px 26px 22px", width: "100%", maxWidth: 400, boxShadow: "0 10px 30px rgba(0,0,0,.25)" }}>
-        <div style={{ fontFamily: displayFont, fontSize: 23, fontWeight: 700, color: T.forest }}>Create your account</div>
-        <div style={{ fontSize: 13, color: T.mute, margin: "4px 0 18px" }}>
-          Registering as <strong>{roleLabel}</strong>{" · "}
+      <div style={{ background: T.card, borderRadius: 16, padding: "26px 26px 22px", width: "100%", maxWidth: 400, boxShadow: "0 10px 30px rgba(0,0,0,.25)", textAlign: "center" }}>
+        <div style={{ fontFamily: displayFont, fontSize: 23, fontWeight: 700, color: T.forest }}>Sign in to Kiray</div>
+        <div style={{ fontSize: 13, color: T.mute, margin: "4px 0 20px" }}>
+          Continuing as <strong>{roleLabel}</strong>{" · "}
           <button onClick={onBack} style={{ background: "none", border: "none", color: T.leaf, cursor: "pointer", fontSize: 13, padding: 0, textDecoration: "underline" }}>change</button>
         </div>
 
-        <Field label="Full name / ሙሉ ስም">
-          <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Negus" />
-        </Field>
-        <Field label="Register with">
-          <div style={{ display: "flex", gap: 8 }}>
-            <Chip active={method === "phone"} onClick={() => { setMethod("phone"); setContact(""); setError(""); }}>📱 Phone</Chip>
-            <Chip active={method === "email"} onClick={() => { setMethod("email"); setContact(""); setError(""); }}>✉️ Email</Chip>
-          </div>
-        </Field>
-        <Field label={method === "phone" ? "Mobile number" : "Email address"}>
-          <input style={inputStyle} value={contact} onChange={(e) => setContact(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder={method === "phone" ? "+251 9… or 09…" : "name@example.com"}
-            inputMode={method === "phone" ? "tel" : "email"} />
-        </Field>
-        {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
-        <button onClick={submit} style={{ ...btnPrimary, width: "100%", padding: 12, fontSize: 14 }}>Create account · ተመዝገብ</button>
+        <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.55, marginBottom: 18 }}>
+          Use your Telegram account — no forms, no passwords. Your name and username come straight from your profile, and listers can reach you on Telegram.
+        </div>
+
+        {/* Telegram renders its official button inside this container */}
+        <div ref={widgetRef} style={{ display: "flex", justifyContent: "center", minHeight: 46 }} />
+
+        {verifying && <div style={{ color: T.mute, fontSize: 12.5, marginTop: 12 }}>Verifying with Telegram…</div>}
+        {error && <div style={{ color: T.danger, fontSize: 12.5, marginTop: 12 }}>{error}</div>}
+
         {role === "tenant" && (
-          <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 14, width: "100%", textAlign: "center", textDecoration: "underline" }}>
+          <button onClick={onSkip} style={{ background: "none", border: "none", color: T.mute, fontSize: 12.5, cursor: "pointer", marginTop: 16, width: "100%", textAlign: "center", textDecoration: "underline" }}>
             Skip for now — browse as guest
           </button>
         )}
@@ -506,8 +529,11 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account }) {
       <span style={{ fontSize: 11.5, background: "rgba(255,255,255,.14)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
         {roleLabel}
       </span>
-      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,.85)" }}>
-        👤 {account ? account.name : "Guest"}
+      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        {account?.photo
+          ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
+          : "👤"}{" "}
+        {account ? account.name : "Guest"}
       </span>
       <nav style={{ display: "flex", gap: 6, marginLeft: 8, flexWrap: "wrap" }}>
         {tabs.map((t) => (
