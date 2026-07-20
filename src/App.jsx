@@ -758,7 +758,7 @@ function PostForm({ role, onDone, account }) {
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab, chats, sendMessage, meName }) {
+function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
   const [hood, setHood] = useState(null);
@@ -767,6 +767,12 @@ function TenantApp({ tab, chats, sendMessage, meName }) {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState([1, 8]);
   const [chatListing, setChatListing] = useState(null);
+
+  useEffect(() => {
+    if (!initialChatListingId) return;
+    const l = LISTINGS.find((x) => x.id === initialChatListingId);
+    if (l) { setChatListing(l); setSelected(l.id); }
+  }, [initialChatListingId]);
 
   const regionObj = LOCATIONS.find((r) => r.region === region);
   const cityObj = regionObj?.cities.find((c) => c.name === city);
@@ -1042,7 +1048,18 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
 
 /* ================= ROOT ================= */
 export default function KirayApp() {
-  const [role, setRole] = useState(null);
+  // A link like ?listing=7 (sent by the Telegram bot's "Chat in app" button)
+  // should land straight on that listing's chat — read it once, then scrub
+  // the URL so switching roles/tabs afterward behaves normally.
+  const deepLinkListingId = useMemo(() => {
+    const id = new URLSearchParams(window.location.search).get("listing");
+    return id ? Number(id) : null;
+  }, []);
+  useEffect(() => {
+    if (deepLinkListingId) window.history.replaceState({}, "", window.location.pathname);
+  }, [deepLinkListingId]);
+
+  const [role, setRole] = useState(deepLinkListingId ? "tenant" : null);
   const [account, setAccount] = useState(null);
   const [tab, setTab] = useState("browse");
   /* Opened inside Telegram? Pick up the visitor's profile automatically.
@@ -1080,7 +1097,7 @@ export default function KirayApp() {
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
       <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} />
       {role === "tenant"
-        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} />
+        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} initialChatListingId={deepLinkListingId} />
         : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
         Kiray · ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.

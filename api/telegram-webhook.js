@@ -1,17 +1,22 @@
 /* ================= KIRAY TELEGRAM BOT =================
-   Vercel serverless function. Telegram POSTs every message here
-   (after you register the webhook — see README-TELEGRAM.md).
+   Vercel serverless function. Telegram POSTs every message AND every button
+   tap (as a "callback_query") here — see README-TELEGRAM.md for setup.
    Env vars required on Vercel:
      TELEGRAM_BOT_TOKEN    — from @BotFather
      TELEGRAM_SECRET_TOKEN — any random string you invent
    Optional:
-     KIRAY_APP_URL         — e.g. https://kiray.vercel.app (adds a button to replies)
+     KIRAY_APP_URL         — e.g. https://kiray-nine.vercel.app
+                              (enables the "Open Web App" button)
 */
 import { LISTINGS } from "../src/data/listings.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const APP_URL = process.env.KIRAY_APP_URL;
+const TOP_COUNT = 5;
 
 const birr = (n) => `${n.toLocaleString("en-US")} ETB/month`;
+
+/* ---------- data helpers ---------- */
 
 function searchListings(query) {
   const q = query.trim().toLowerCase();
@@ -23,6 +28,29 @@ function searchListings(query) {
   );
 }
 
+// "Top" = verified listers first, then most recently posted.
+function rankListings(list) {
+  return [...list].sort(
+    (a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0) || new Date(b.posted) - new Date(a.posted)
+  );
+}
+
+// For the no-search-term view: one best listing per city, so results span
+// the country instead of clustering wherever the data happens to be densest.
+function topAcrossCities(list, n) {
+  const bestPerCity = new Map();
+  for (const l of rankListings(list)) {
+    if (!bestPerCity.has(l.city)) bestPerCity.set(l.city, l);
+  }
+  return rankListings([...bestPerCity.values()]).slice(0, n);
+}
+
+function findListing(id) {
+  return LISTINGS.find((l) => l.id === Number(id));
+}
+
+/* ---------- formatting ---------- */
+
 function formatListing(l) {
   const lines = [
     `🏠 <b>${l.title}</b>${l.verified ? " ✅" : ""}`,
@@ -31,9 +59,25 @@ function formatListing(l) {
   ];
   if (l.beds) lines.push(`🛏 ${l.beds} bed${l.beds > 1 ? "s" : ""} · ${l.size} m²`);
   else lines.push(`📐 ${l.size} m² · ${l.kind}`);
-  lines.push(`📞 ${l.name} (${l.lister}): ${l.phone}`);
   return lines.join("\n");
 }
+
+function listingKeyboard(l) {
+  return {
+    inline_keyboard: [
+      [{ text: "📞 Contact & chat", callback_data: `contact_${l.id}` }],
+    ],
+  };
+}
+
+function startKeyboard() {
+  const rows = [];
+  if (APP_URL) rows.push([{ text: "🌍 Open Web App", web_app: { url: APP_URL } }]);
+  rows.push([{ text: "💬 Browse listings here", callback_data: "browse" }]);
+  return { inline_keyboard: rows };
+}
+
+/* ---------- Telegram API calls ---------- */
 
 async function sendMessage(chatId, text, extra = {}) {
   await fetch(`${API()}/sendMessage`, {
@@ -43,12 +87,70 @@ async function sendMessage(chatId, text, extra = {}) {
   });
 }
 
+async function answerCallbackQuery(id, options = {}) {
+  await fetch(`${API()}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: id, ...options }),
+  });
+}
+
+/* ---------- shared actions ---------- */
+
+async function sendTopListings(chatId, query = "") {
+  const matches = searchListings(query);
+  const results = query ? rankListings(matches) : topAcrossCities(matches, LISTINGS.length);
+
+  if (results.length === 0) {
+    await sendMessage(
+      chatId,
+      `No listings found for “${query}” yet. Try a city (Addis Ababa, Hawassa, Bahir Dar…), a neighbourhood, or a type (shop, office, villa).`
+    );
+    return;
+  }
+
+  const shown = results.slice(0, TOP_COUNT);
+  await sendMessage(
+    chatId,
+    `Top listing${shown.length > 1 ? "s" : ""}${query ? ` for “${query}”` : ""}${
+      results.length > shown.length ? ` — showing ${shown.length} of ${results.length}` : ""
+    }:`
+  );
+  for (const l of shown) {
+    await sendMessage(chatId, formatListing(l), { reply_markup: listingKeyboard(l) });
+  }
+  await sendMessage(
+    chatId,
+    "🔎 Narrow it down: /listings <city, neighbourhood, or type> — e.g. /listings Bole"
+  );
+}
+
+async function sendContactCard(chatId, listing) {
+  if (!listing) {
+    await sendMessage(chatId, "That listing isn't available anymore.");
+    return;
+  }
+  const lines = [
+    `📇 <b>Contact for:</b> ${listing.title}`,
+    `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · on behalf of ${listing.owner}` : ""}`,
+    listing.verified ? "✅ Verified lister" : "",
+  ].filter(Boolean);
+
+  const rows = [[{ text: "📞 Call", url: `tel:${listing.phone}` }]];
+  if (APP_URL) {
+    rows.push([{ text: "💬 Chat in Kiray app", web_app: { url: `${APP_URL}?listing=${listing.id}` } }]);
+  }
+
+  await sendMessage(chatId, lines.join("\n"), { reply_markup: { inline_keyboard: rows } });
+}
+
+/* ---------- webhook entry point ---------- */
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(200).json({ ok: true, hint: "Kiray Telegram webhook is alive." });
   }
 
-  // Only accept requests that carry the secret we registered with setWebhook
   if (
     req.headers["x-telegram-bot-api-secret-token"] !== process.env.TELEGRAM_SECRET_TOKEN
   ) {
@@ -56,19 +158,34 @@ export default async function handler(req, res) {
   }
 
   const update = req.body;
-  const msg = update?.message;
-  if (!msg?.text) return res.status(200).json({ ok: true });
-
-  const chatId = msg.chat.id;
-  const text = msg.text.trim();
-  const appUrl = process.env.KIRAY_APP_URL;
-  // web_app (not url) opens Kiray INSIDE Telegram, so the app receives the
-  // visitor's profile automatically — no sign-in screens.
-  const appButton = appUrl
-    ? { reply_markup: { inline_keyboard: [[{ text: "Open Kiray 🌍", web_app: { url: appUrl } }]] } }
-    : {};
 
   try {
+    // --- Button taps ---
+    if (update?.callback_query) {
+      const cq = update.callback_query;
+      const chatId = cq.message?.chat?.id;
+      const data = cq.data || "";
+
+      if (data === "browse") {
+        await answerCallbackQuery(cq.id);
+        if (chatId) await sendTopListings(chatId);
+      } else if (data.startsWith("contact_")) {
+        await answerCallbackQuery(cq.id);
+        if (chatId) await sendContactCard(chatId, findListing(data.replace("contact_", "")));
+      } else {
+        await answerCallbackQuery(cq.id);
+      }
+
+      return res.status(200).json({ ok: true });
+    }
+
+    // --- Text messages ---
+    const msg = update?.message;
+    if (!msg?.text) return res.status(200).json({ ok: true });
+
+    const chatId = msg.chat.id;
+    const text = msg.text.trim();
+
     if (text.startsWith("/start")) {
       await sendMessage(
         chatId,
@@ -77,14 +194,9 @@ export default async function handler(req, res) {
           "",
           "Find rental homes and business spaces across Ethiopia.",
           "",
-          "Try:",
-          "• /listings — everything available",
-          "• /listings Addis Ababa — by city",
-          "• /listings Bole — by neighbourhood",
-          "• /listings shop — by property type",
-          "• /help — how this works",
+          "How would you like to browse?",
         ].join("\n"),
-        appButton
+        { reply_markup: startKeyboard() }
       );
     } else if (text.startsWith("/help")) {
       await sendMessage(
@@ -92,46 +204,28 @@ export default async function handler(req, res) {
         [
           "<b>How to use Kiray</b>",
           "",
-          "Search with /listings followed by a city, neighbourhood, or property type:",
-          "• /listings Hawassa",
-          "• /listings Piassa",
-          "• /listings office",
+          "• /listings — top listings right now",
+          "• /listings Hawassa — search by city",
+          "• /listings Piassa — search by neighbourhood",
+          "• /listings office — search by property type",
           "",
-          "✅ means the lister is verified. Contact them directly on the phone number shown.",
+          "Tap <b>📞 Contact & chat</b> on any listing to call the owner or broker, or open a chat with them right inside the Kiray app.",
+          "✅ means the lister is verified.",
         ].join("\n"),
-        appButton
+        { reply_markup: APP_URL ? { inline_keyboard: [[{ text: "🌍 Open Web App", web_app: { url: APP_URL } }]] } : undefined }
       );
     } else if (text.startsWith("/listings")) {
       const query = text.replace("/listings", "").trim();
-      const results = searchListings(query);
-
-      if (results.length === 0) {
-        await sendMessage(
-          chatId,
-          `No listings found for “${query}” yet. Try a city (Addis Ababa, Hawassa, Bahir Dar…), a neighbourhood, or a type (shop, office, villa).`
-        );
-      } else {
-        const shown = results.slice(0, 5);
-        await sendMessage(
-          chatId,
-          `Found <b>${results.length}</b> listing${results.length > 1 ? "s" : ""}${
-            query ? ` for “${query}”` : ""
-          }${results.length > 5 ? " — showing the first 5" : ""}:`
-        );
-        for (const l of shown) {
-          await sendMessage(chatId, formatListing(l), appButton);
-        }
-      }
+      await sendTopListings(chatId, query);
     } else {
       await sendMessage(
         chatId,
-        "I didn't understand that. Try /listings <city or area> — for example: /listings Addis Ababa"
+        "I didn't understand that. Try /listings <city or area>, or /start to see the menu again."
       );
     }
   } catch (err) {
     console.error("Telegram handler error:", err);
   }
 
-  // Always 200 so Telegram doesn't retry the same update forever
   return res.status(200).json({ ok: true });
 }
