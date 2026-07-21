@@ -40,6 +40,27 @@ const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
 
 const birr = (n) => `${n.toLocaleString("en-US")} ETB/month`;
 
+// Every Telegram call goes through here so failures are never silently
+// swallowed — a wrong/missing admin permission on the channel, for example,
+// makes Telegram return HTTP 200 or 403 with { ok: false, description }
+// rather than throwing, so a plain try/catch around fetch() would miss it.
+const errors = [];
+async function call(method, body, label) {
+  let data;
+  try {
+    const res = await fetch(`${API()}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    data = await res.json();
+  } catch (e) {
+    data = { ok: false, description: e.message };
+  }
+  if (!data.ok) errors.push({ step: label, method, error: data.description || "unknown error" });
+  return data;
+}
+
 /* ---------- deterministic "pick of the day" ---------- */
 
 function seededRandom(seed) {
@@ -63,46 +84,31 @@ function pickDailyListings() {
 
 /* ---------- Telegram API calls (channel-safe subset) ---------- */
 
-async function sendMessage(chatId, text, extra = {}) {
-  const res = await fetch(`${API()}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", ...extra }),
-  });
-  return res.json();
+async function sendMessage(chatId, text, extra = {}, label = "message") {
+  return call("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", ...extra }, label);
 }
 
 async function sendVenuePin(chatId, l) {
   if (typeof l.lat !== "number" || typeof l.lng !== "number") return;
-  await fetch(`${API()}/sendVenue`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId, latitude: l.lat, longitude: l.lng,
-      title: l.title, address: `${l.hood}, ${l.city}`,
-    }),
-  });
+  await call(
+    "sendVenue",
+    { chat_id: chatId, latitude: l.lat, longitude: l.lng, title: l.title, address: `${l.hood}, ${l.city}` },
+    `listing ${l.id} venue pin`
+  );
 }
 
 async function sendPhotoAlbum(chatId, l) {
   const photos = (l.photos || []).slice(0, 7);
   if (photos.length === 0) return;
   if (photos.length === 1) {
-    await fetch(`${API()}/sendPhoto`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, photo: photos[0], caption: l.title }),
-    });
+    await call("sendPhoto", { chat_id: chatId, photo: photos[0], caption: l.title }, `listing ${l.id} photo`);
     return;
   }
-  await fetch(`${API()}/sendMediaGroup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      media: photos.map((url, i) => ({ type: "photo", media: url, ...(i === 0 ? { caption: l.title } : {}) })),
-    }),
-  });
+  await call(
+    "sendMediaGroup",
+    { chat_id: chatId, media: photos.map((url, i) => ({ type: "photo", media: url, ...(i === 0 ? { caption: l.title } : {}) })) },
+    `listing ${l.id} photo album`
+  );
 }
 
 function formatListing(l) {
@@ -125,6 +131,8 @@ function listingButtons(l) {
 /* ---------- entry point ---------- */
 
 export default async function handler(req, res) {
+  errors.length = 0; // module state can survive across warm serverless invocations — start clean each run
+
   // Vercel attaches this header automatically on cron-triggered requests,
   // once CRON_SECRET exists as an env var on the project.
   if (process.env.CRON_SECRET && req.headers["authorization"] !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -138,20 +146,31 @@ export default async function handler(req, res) {
 
   await sendMessage(
     CHANNEL_ID,
-    `📅 <b>${today}</b> — today's ${picks.length} picks on Ethio Kiray 🏠\nየዛሬ ${picks.length} ምርጦች በኢትዮ ኪራይ`
+    `📅 <b>${today}</b> — today's ${picks.length} picks on Ethio Kiray 🏠\nየዛሬ ${picks.length} ምርጦች በኢትዮ ኪራይ`,
+    {},
+    "header"
   );
 
   for (const l of picks) {
     await sendPhotoAlbum(CHANNEL_ID, l);
     await sendVenuePin(CHANNEL_ID, l);
-    await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) });
+    await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
   if (APP_URL) {
-    await sendMessage(CHANNEL_ID, "See everything on the map 👇 · ሁሉንም በካርታ ይመልከቱ", {
-      reply_markup: { inline_keyboard: [[{ text: "🌍 Open Ethio Kiray", url: APP_URL }]] },
-    });
+    await sendMessage(
+      CHANNEL_ID,
+      "See everything on the map 👇 · ሁሉንም በካርታ ይመልከቱ",
+      { reply_markup: { inline_keyboard: [[{ text: "🌍 Open Ethio Kiray", url: APP_URL }]] } },
+      "footer"
+    );
   }
 
-  return res.status(200).json({ ok: true, date: today, posted: picks.length, listingIds: picks.map((l) => l.id) });
+  return res.status(errors.length ? 502 : 200).json({
+    ok: errors.length === 0,
+    date: today,
+    posted: picks.length,
+    listingIds: picks.map((l) => l.id),
+    ...(errors.length ? { errors } : {}),
+  });
 }
