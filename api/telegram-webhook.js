@@ -407,18 +407,24 @@ async function sendContactCard(chatId, lang, listing) {
     await sendMessage(chatId, s.listing_unavailable);
     return;
   }
+  // Telegram rejects "tel:" links as inline-button URLs outright (a hard
+  // platform restriction, confirmed directly against the live API — not
+  // just a formatting issue). Phone numbers in plain message text are
+  // auto-detected and tappable-to-dial on Telegram's own clients instead,
+  // so the number goes in the text rather than a button.
   const lines = [
     s.contact_for(listing.title),
     `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · ${listing.owner}` : ""}`,
     listing.verified ? s.verified : "",
+    `${s.call_btn}: ${listing.phone}`,
   ].filter(Boolean);
 
-  const rows = [[{ text: s.call_btn, url: `tel:${listing.phone}` }]];
+  const rows = [];
   if (APP_URL) {
     rows.push([{ text: s.chat_in_app_btn, web_app: { url: `${APP_URL}?listing=${listing.id}` } }]);
   }
   await sendVenuePin(chatId, listing);
-  await sendMessage(chatId, lines.join("\n"), { reply_markup: { inline_keyboard: rows } });
+  await sendMessage(chatId, lines.join("\n"), rows.length ? { reply_markup: { inline_keyboard: rows } } : {});
 }
 
 /* ---------- landlord / broker section ---------- */

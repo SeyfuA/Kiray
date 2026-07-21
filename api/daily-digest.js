@@ -119,13 +119,16 @@ function formatListing(l) {
   ];
   if (l.beds) lines.push(`🛏 ${l.beds} bed${l.beds > 1 ? "s" : ""} · ${l.size} m²`);
   else lines.push(`📐 ${l.size} m² · ${l.kind}`);
+  // Telegram rejects "tel:" links as inline-button URLs outright (confirmed
+  // directly against the live API), so the number goes in the message text
+  // instead — Telegram auto-detects and makes phone numbers tappable there.
+  lines.push(`📞 Call · ደውል: ${l.phone}`);
   return lines.join("\n");
 }
 
 function listingButtons(l) {
-  const rows = [[{ text: "📞 Call · ደውል", url: `tel:${l.phone}` }]];
-  if (APP_URL) rows.push([{ text: "🌍 View in app · በመተግበሪያ ይመልከቱ", url: `${APP_URL}?listing=${l.id}` }]);
-  return { inline_keyboard: rows };
+  if (!APP_URL) return undefined;
+  return { inline_keyboard: [[{ text: "🌍 View in app · በመተግበሪያ ይመልከቱ", url: `${APP_URL}?listing=${l.id}` }]] };
 }
 
 /* ---------- entry point ---------- */
