@@ -4,6 +4,95 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LISTINGS } from "./data/listings.js";
 
+/* ================= UI TRANSLATIONS (English / Amharic) =================
+   Covers the app's own interface chrome — navigation, buttons, form labels,
+   empty states. Listing content itself (titles, descriptions, property type
+   text a lister typed) is left as entered, same as any real classifieds
+   site — only Ethio Kiray's UI is localized, not other people's content.
+   AI-assisted translations; worth a native-speaker review before launch. */
+const UI = {
+  en: {
+    switchRole: "⇄ Switch role", guest: "Guest",
+    nav_browse: "Find a rental", nav_saved: "Saved ❤", nav_listings_landlord: "My properties",
+    nav_listings_broker: "My portfolio", nav_inquiries: "Inquiries", nav_post: "+ New listing",
+    lang_toggle: "🌐 አማርኛ",
+    region: "Region", city: "City / town", neighbourhood: "Neighbourhood", propertyType: "Property type",
+    maxPrice: "Max price", searchPlaceholder: "Search listings…", allTypes: "All",
+    resultsCount: (n) => `${n} listing${n !== 1 ? "s" : ""} · newest first`,
+    noResults: "No listings match these filters yet. Widen the price range or clear the neighbourhood filter.",
+    chatBtn: "💬 Chat", saveBtn: "❤ Save", savedBtn: "❤ Saved", verified: "Verified",
+    postedAgo: (t) => `🕐 Posted ${t}`,
+    chatPlaceholder: "Type a message…", send: "Send", close: "Close",
+    postForm_title: "Post a listing", postForm_submit: "Submit listing",
+    my_listings_empty: "No properties yet — post your first listing.",
+    inquiries_empty: "No inquiries yet. They'll show up here as soon as a tenant messages you.",
+    where: "Where?", clearLocation: "Clear location", maxRent: "Max rent",
+    saved_title: "Saved listings", saved_subtitle: "You'll get a notification if a saved listing's price changes or it's rented out.",
+    saved_empty: "Nothing saved yet — tap the heart on any listing.",
+    inquiries_title: "Tenant inquiries", inquiries_subtitle: "Reply fast — listings that respond within 2 hours rank higher in tenant search.",
+    signedInAs: "Signed in as", verifiedTag: "✓ verified",
+    brokerNote: "Listings you manage on behalf of owners. Owner details stay private to you.",
+    landlordNote: "Listings you own and manage directly.",
+    stat_active: "Active listings", stat_views: "Views this month", stat_inquiries: "Open inquiries",
+    pf_title: "List a property",
+    pf_subtitle_broker: "Brokers must record the owner's details — tenants see your name, the owner stays private until contract stage.",
+    pf_subtitle_landlord: "You're listing as the owner. Verified owners get a badge and rank higher in search.",
+    pf_ownerDetails: "OWNER DETAILS (kept private)",
+    pf_propertyType: "Property type", pf_kind: "Kind of property", pf_rooms: "Number of rooms",
+    pf_floor: "Floor", pf_block: "Block / building no. (optional)", pf_area: "Area in square metres (m²)",
+    pf_features: "Features — select all that apply", pf_description: "Description",
+    pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Neighbourhood",
+    pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing (optional)",
+    pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
+    pf_orTapMap: "or tap the map to place the pin, then drag it to adjust",
+    pf_confirmPin: "I confirm this pin is the actual location of the property",
+    pf_submit: "Submit for verification",
+    pf_submitted_title: "Listing submitted", pf_viewMyListings: "View my listings",
+    pf_err_location: "Set the property location: tap “Use my current location” or tap the map to place the pin.",
+    pf_err_confirm: "Please confirm that the pin marks the actual location of the property.",
+  },
+  am: {
+    switchRole: "⇄ ሚና ቀይር", guest: "እንግዳ",
+    nav_browse: "ኪራይ ፈልግ", nav_saved: "የተቀመጡ ❤", nav_listings_landlord: "የኔ ንብረቶች",
+    nav_listings_broker: "የኔ ፖርትፎሊዮ", nav_inquiries: "ጥያቄዎች", nav_post: "+ አዲስ ማስታወቂያ",
+    lang_toggle: "🌐 English",
+    region: "ክልል", city: "ከተማ / ወረዳ", neighbourhood: "ሰፈር", propertyType: "የንብረት አይነት",
+    maxPrice: "ከፍተኛ ዋጋ", searchPlaceholder: "ማስታወቂያ ይፈልጉ…", allTypes: "ሁሉም",
+    resultsCount: (n) => `${n} ማስታወቂያ${n !== 1 ? "ዎች" : ""} · አዲሶቹ መጀመሪያ`,
+    noResults: "በእነዚህ ማጣሪያዎች ምንም ማስታወቂያ አልተገኘም። የዋጋ ክልሉን ያስፉ ወይም የሰፈር ማጣሪያውን ያጽዱ።",
+    chatBtn: "💬 ውይይት", saveBtn: "❤ አስቀምጥ", savedBtn: "❤ ተቀምጧል", verified: "የተረጋገጠ",
+    postedAgo: (t) => `🕐 የተለጠፈው ${t}`,
+    chatPlaceholder: "መልእክት ይጻፉ…", send: "ላክ", close: "ዝጋ",
+    postForm_title: "ማስታወቂያ ለጥፍ", postForm_submit: "ማስታወቂያ አስገባ",
+    my_listings_empty: "እስካሁን ምንም ንብረት የለም — የመጀመሪያ ማስታወቂያዎን ይለጥፉ።",
+    inquiries_empty: "እስካሁን ምንም ጥያቄ የለም። ተከራይ መልእክት እንደላከ እዚህ ይታያል።",
+    where: "የት?", clearLocation: "አካባቢ አጽዳ", maxRent: "ከፍተኛ ኪራይ",
+    saved_title: "የተቀመጡ ማስታወቂያዎች", saved_subtitle: "የተቀመጠ ማስታወቂያ ዋጋ ቢቀየር ወይም ቢከራይ ማሳወቂያ ይደርስዎታል።",
+    saved_empty: "እስካሁን ምንም አልተቀመጠም — በማንኛውም ማስታወቂያ ላይ ልብን ይንኩ።",
+    inquiries_title: "የተከራይ ጥያቄዎች", inquiries_subtitle: "በፍጥነት ይመልሱ — በ2 ሰዓት ውስጥ የሚመልሱ ማስታወቂያዎች በተከራይ ፍለጋ ላይ ከፍ ብለው ይታያሉ።",
+    signedInAs: "የገቡት እንደ", verifiedTag: "✓ የተረጋገጠ",
+    brokerNote: "በባለቤቶች ስም የሚያስተዳድሯቸው ማስታወቂያዎች። የባለቤት መረጃ ለእርስዎ ብቻ የተደበቀ ነው።",
+    landlordNote: "የእርስዎ ንብረት የሆኑ እና በቀጥታ የሚያስተዳድሯቸው ማስታወቂያዎች።",
+    stat_active: "ንቁ ማስታወቂያዎች", stat_views: "የዚህ ወር እይታዎች", stat_inquiries: "ክፍት ጥያቄዎች",
+    pf_title: "ንብረት አስመዝግብ",
+    pf_subtitle_broker: "ደላላዎች የባለቤቱን መረጃ መመዝገብ አለባቸው — ተከራዮች የእርስዎን ስም ብቻ ያያሉ፣ ባለቤቱ እስከ ውል ደረጃ ድረስ የተደበቀ ይሆናል።",
+    pf_subtitle_landlord: "እንደ ባለቤት እየመዘገቡ ነው። የተረጋገጡ ባለቤቶች ባጅ ያገኛሉ እና በፍለጋ ላይ ከፍ ብለው ይታያሉ።",
+    pf_ownerDetails: "የባለቤት መረጃ (የተደበቀ)",
+    pf_propertyType: "የንብረት አይነት", pf_kind: "የንብረት ዓይነት", pf_rooms: "የክፍሎች ብዛት",
+    pf_floor: "ፎቅ", pf_block: "ብሎክ / ህንፃ ቁጥር (አማራጭ)", pf_area: "ስፋት በካሬ ሜትር (m²)",
+    pf_features: "ገፅታዎች — ተገቢውን ሁሉ ይምረጡ", pf_description: "ዝርዝር መግለጫ",
+    pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ሰፈር",
+    pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ (አማራጭ)",
+    pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
+    pf_orTapMap: "ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ፣ ከዚያም ለማስተካከል ይጎትቱት",
+    pf_confirmPin: "ይህ ፒን የንብረቱ ትክክለኛ አካባቢ መሆኑን አረጋግጣለሁ",
+    pf_submit: "ለማረጋገጫ አስገባ",
+    pf_submitted_title: "ማስታወቂያ ገብቷል", pf_viewMyListings: "ማስታወቂያዎቼን ይመልከቱ",
+    pf_err_location: "የንብረቱን አካባቢ ያስቀምጡ፦ “የአሁኑን አካባቢዬን ተጠቀም” ን ይንኩ ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ።",
+    pf_err_confirm: "እባክዎ ፒኑ የንብረቱን ትክክለኛ አካባቢ እንደሚያመለክት ያረጋግጡ።",
+  },
+};
+
 /* ================= DESIGN TOKENS ================= */
 const T = {
   ink: "#152019",
@@ -303,7 +392,11 @@ function CallButton({ phone, label }) {
 /* ================= CHAT MODAL =================
    me = "tenant" | "lister". Messages live in shared root state, so a message
    sent as a tenant shows up in the landlord/broker Inquiries after switching roles. */
-function ChatModal({ thread, listing, me, onSend, onClose }) {
+function ChatModal({ thread, listing, me, onSend, onClose, lang = "en" }) {
+  const u = UI[lang];
+  const startHint = lang === "am"
+    ? "ውይይት ይጀምሩ — ስለ ተገኝነት፣ ስለ መመልከቻ ጊዜ ወይም ስለ ሰፈሩ ይጠይቁ።"
+    : "Start the conversation — ask about availability, viewing times, or the neighbourhood.";
   const [text, setText] = useState("");
   const scrollRef = useRef(null);
   const messages = thread?.messages || [];
@@ -349,7 +442,7 @@ function ChatModal({ thread, listing, me, onSend, onClose }) {
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "14px 14px 6px", background: T.paper, minHeight: 220 }}>
           {messages.length === 0 && (
             <div style={{ textAlign: "center", color: T.mute, fontSize: 13, padding: "30px 10px" }}>
-              Start the conversation — ask about availability, viewing times, or the neighbourhood.
+              {startHint}
             </div>
           )}
           {messages.map((m, i) => {
@@ -382,10 +475,10 @@ function ChatModal({ thread, listing, me, onSend, onClose }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Type a message… / መልእክት ይጻፉ…"
+            placeholder={u.chatPlaceholder}
             style={{ ...inputStyle, flex: 1 }}
           />
-          <button onClick={send} style={{ ...btnPrimary, padding: "10px 16px" }}>Send</button>
+          <button onClick={send} style={{ ...btnPrimary, padding: "10px 16px" }}>{u.send}</button>
         </div>
       </div>
     </div>
@@ -393,23 +486,35 @@ function ChatModal({ thread, listing, me, onSend, onClose }) {
 }
 
 /* ================= ROLE SELECTION (first screen) ================= */
-function RoleGate({ onPick }) {
+function RoleGate({ onPick, lang, setLang }) {
   const roles = [
-    { key: "tenant", icon: "🔑", en: "I'm looking to rent", am: "ተከራይ", desc: "Search homes and business spaces by region, city, and neighbourhood. Save favourites and contact listers." },
-    { key: "landlord", icon: "🏠", en: "I own property", am: "አከራይ / ባለቤት", desc: "List your houses or commercial spaces, manage inquiries, and rent directly — no middleman needed." },
-    { key: "broker", icon: "🤝", en: "I'm a broker / intermediary", am: "ደላላ / አገናኝ", desc: "Manage a portfolio for multiple owners, track inquiries and commissions, and build a verified reputation." },
+    { key: "tenant", icon: "🔑", en: "I'm looking to rent", am: "ተከራይ",
+      desc_en: "Search homes and business spaces by region, city, and neighbourhood. Save favourites and contact listers.",
+      desc_am: "በክልል፣ በከተማ እና በሰፈር የመኖሪያ እና የንግድ ቦታዎችን ይፈልጉ። የወደዷቸውን ያስቀምጡ እና ከአከራዮች ጋር ይገናኙ።" },
+    { key: "landlord", icon: "🏠", en: "I own property", am: "አከራይ / ባለቤት",
+      desc_en: "List your houses or commercial spaces, manage inquiries, and rent directly — no middleman needed.",
+      desc_am: "ቤቶችዎን ወይም የንግድ ቦታዎችዎን ያስመዝግቡ፣ ጥያቄዎችን ያስተዳድሩ፣ በቀጥታ ያከራዩ — ደላላ ሳያስፈልግ።" },
+    { key: "broker", icon: "🤝", en: "I'm a broker / intermediary", am: "ደላላ / አገናኝ",
+      desc_en: "Manage a portfolio for multiple owners, track inquiries and commissions, and build a verified reputation.",
+      desc_am: "ለብዙ ባለቤቶች ንብረቶችን ያስተዳድሩ፣ ጥያቄዎችን እና ኮሚሽኖችን ይከታተሉ፣ የተረጋገጠ ስም ይገንቡ።" },
   ];
+  const t = lang === "am"
+    ? { tagline: "በኢትዮጵያ ውስጥ ኪራይ — በሁሉም ከተማ፣ በሁሉም ሰፈር", who: "ማን ነዎት?", cont: "ቀጥል →", footer: "ማንኛውም ጊዜ ከላይ ካለው ባር ሚናዎን መቀየር ይችላሉ። ናሙና — ለሙከራ ብቻ።", toggle: "🌐 English" }
+    : { tagline: "Rentals across Ethiopia — every capital, every neighbourhood", who: "Who are you?", cont: "Continue →", footer: "You can switch roles anytime from the top bar. Prototype — sample data only.", toggle: "🌐 አማርኛ" };
   return (
-    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont }}>
+    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont, position: "relative" }}>
+      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ position: "absolute", top: 18, right: 18, padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+        {t.toggle}
+      </button>
       <div style={{ textAlign: "center", marginBottom: 34 }}>
         <div style={{ fontFamily: displayFont, fontSize: 44, fontWeight: 700, color: "#fff", letterSpacing: -1 }}>
-          Kiray <span style={{ fontSize: 26, opacity: 0.85, fontWeight: 400 }}>ኪራይ</span>
+          Ethio Kiray <span style={{ fontSize: 26, opacity: 0.85, fontWeight: 400 }}>ኢትዮ ኪራይ</span>
         </div>
         <div style={{ color: "rgba(255,255,255,.8)", fontSize: 15, marginTop: 6 }}>
-          Rentals across Ethiopia — every capital, every neighbourhood
+          {t.tagline}
         </div>
         <div style={{ color: T.gold, fontSize: 14, marginTop: 18, fontWeight: 600 }}>
-          Who are you? · ማን ነዎት?
+          {t.who}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, maxWidth: 880, width: "100%" }}>
@@ -425,13 +530,13 @@ function RoleGate({ onPick }) {
             <div style={{ fontSize: 34, marginBottom: 10 }}>{r.icon}</div>
             <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 17, color: T.ink }}>{r.en}</div>
             <div style={{ color: T.leaf, fontWeight: 600, fontSize: 14, margin: "2px 0 10px" }}>{r.am}</div>
-            <div style={{ fontSize: 13, color: T.mute, lineHeight: 1.5 }}>{r.desc}</div>
-            <div style={{ marginTop: 16, color: T.forest, fontWeight: 700, fontSize: 13 }}>Continue →</div>
+            <div style={{ fontSize: 13, color: T.mute, lineHeight: 1.5 }}>{lang === "am" ? r.desc_am : r.desc_en}</div>
+            <div style={{ marginTop: 16, color: T.forest, fontWeight: 700, fontSize: 13 }}>{t.cont}</div>
           </button>
         ))}
       </div>
       <div style={{ color: "rgba(255,255,255,.55)", fontSize: 12, marginTop: 30 }}>
-        You can switch roles anytime from the top bar. Prototype — sample data only.
+        {t.footer}
       </div>
     </div>
   );
@@ -439,7 +544,7 @@ function RoleGate({ onPick }) {
 
 /* ================= TELEGRAM PROFILE PICKUP =================
    No sign-in screens anywhere. When the app is opened inside Telegram
-   (via the bot's "Open Kiray" button), Telegram supplies the visitor's
+   (via the bot's "Open Web App" button), Telegram supplies the visitor's
    profile automatically; we verify it server-side (api/telegram-webapp-auth.js)
    and use it as the account. Opened in a normal browser, everyone is simply
    a guest — no credentials requested. */
@@ -472,13 +577,14 @@ function useTelegramProfile(setAccount) {
 }
 
 /* ================= SHARED HEADER ================= */
-function Header({ role, tabs, tab, setTab, onSwitchRole, account }) {
+function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang }) {
+  const u = UI[lang];
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
     <header style={{ background: T.forest, color: "#fff", padding: "12px 22px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Kiray</span>
-        <span style={{ fontSize: 14, opacity: 0.85 }}>ኪራይ</span>
+        <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
+        <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
       </div>
       <span style={{ fontSize: 11.5, background: "rgba(255,255,255,.14)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
         {roleLabel}
@@ -487,7 +593,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account }) {
         {account?.photo
           ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
           : "👤"}{" "}
-        {account ? account.name : "Guest"}
+        {account ? account.name : u.guest}
       </span>
       <nav style={{ display: "flex", gap: 6, marginLeft: 8, flexWrap: "wrap" }}>
         {tabs.map((t) => (
@@ -499,8 +605,11 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account }) {
           }}>{t.label}</button>
         ))}
       </nav>
-      <button onClick={onSwitchRole} style={{ marginLeft: "auto", padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
-        ⇄ Switch role
+      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ marginLeft: "auto", padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+        {u.lang_toggle}
+      </button>
+      <button onClick={onSwitchRole} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+        {u.switchRole}
       </button>
     </header>
   );
@@ -585,7 +694,8 @@ function FlyTo({ pos, trigger }) {
   return null;
 }
 
-function PostForm({ role, onDone, account }) {
+function PostForm({ role, onDone, account, lang = "en" }) {
+  const u = UI[lang];
   const [posted, setPosted] = useState(false);
   const [ptype, setPtype] = useState("Residential");
   const [kind, setKind] = useState(PROPERTY_KINDS.Residential[0]);
@@ -625,8 +735,8 @@ function PostForm({ role, onDone, account }) {
   };
 
   const submitListing = () => {
-    if (!coords) return setFormErr("Set the property location: tap “Use my current location” or tap the map to place the pin.");
-    if (!confirmed) return setFormErr("Please confirm that the pin marks the actual location of the property.");
+    if (!coords) return setFormErr(u.pf_err_location);
+    if (!confirmed) return setFormErr(u.pf_err_confirm);
     setFormErr("");
     setPosted(true);
   };
@@ -634,100 +744,106 @@ function PostForm({ role, onDone, account }) {
     return (
       <div style={{ textAlign: "center", padding: "20px 0" }}>
         <div style={{ fontSize: 40 }}>✓</div>
-        <h2 style={{ fontFamily: displayFont, margin: "8px 0 6px" }}>Listing submitted</h2>
+        <h2 style={{ fontFamily: displayFont, margin: "8px 0 6px" }}>{u.pf_submitted_title}</h2>
         <p style={{ color: T.mute, fontSize: 14, maxWidth: 380, margin: "0 auto" }}>
-          Submitted {fullDate(new Date().toISOString())}{coords ? <> with location pin confirmed at <strong>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</strong></> : ""}. In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
+          {lang === "am" ? (
+            <>
+              {fullDate(new Date().toISOString())} ላይ ገብቷል{coords ? <> ፒን ቦታ ተረጋግጦ በ<strong>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</strong></> : ""}። በምርት ላይ ይህ ወደ ግምገማ ይገባል፦ ስልክ / የፋይዳ መታወቂያ ማረጋገጫ{isBroker ? " እና የባለቤቱ ስምምነት ማረጋገጫ" : ""}፣ ከዚያም በተመረጠው ሰፈር ካርታ ላይ ቀጥታ ይታያል።
+            </>
+          ) : (
+            <>
+              Submitted {fullDate(new Date().toISOString())}{coords ? <> with location pin confirmed at <strong>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</strong></> : ""}. In production this enters review: phone / Fayda ID verification{isBroker ? " plus the owner's consent confirmation" : ""}, then it goes live on the map in the chosen neighbourhood.
+            </>
+          )}
         </p>
-        <button onClick={onDone} style={{ ...btnPrimary, marginTop: 14, padding: "10px 18px" }}>View my listings</button>
+        <button onClick={onDone} style={{ ...btnPrimary, marginTop: 14, padding: "10px 18px" }}>{u.pf_viewMyListings}</button>
       </div>
     );
   }
   return (
     <>
-      <h2 style={{ fontFamily: displayFont, margin: "0 0 4px", fontSize: 20 }}>List a property</h2>
+      <h2 style={{ fontFamily: displayFont, margin: "0 0 4px", fontSize: 20 }}>{u.pf_title}</h2>
       <p style={{ color: T.mute, fontSize: 13, margin: "0 0 18px" }}>
-        {isBroker
-          ? "Brokers must record the owner's details — tenants see your name, the owner stays private until contract stage."
-          : "You're listing as the owner. Verified owners get a badge and rank higher in search."}
+        {isBroker ? u.pf_subtitle_broker : u.pf_subtitle_landlord}
       </p>
       {isBroker && (
         <div style={{ background: T.goldSoft, border: `1px solid ${T.gold}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6410", marginBottom: 8 }}>OWNER DETAILS (kept private)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6410", marginBottom: 8 }}>{u.pf_ownerDetails}</div>
           <Field label="Owner full name"><input style={inputStyle} placeholder="e.g. Ato Dawit Bekele" /></Field>
           <Field label="Owner phone"><input style={inputStyle} placeholder="+251 9…" /></Field>
           <Field label="Your commission"><select style={inputStyle}><option>1 month's rent (standard)</option><option>Half month's rent</option><option>Custom agreement</option></select></Field>
         </div>
       )}
-      <Field label="Property type">
+      <Field label={u.pf_propertyType}>
         <div style={{ display: "flex", gap: 8 }}>
           <Chip active={ptype === "Residential"} onClick={() => pickType("Residential")}>Residential · መኖሪያ</Chip>
           <Chip active={ptype === "Business"} onClick={() => pickType("Business")}>Business · ንግድ</Chip>
         </div>
       </Field>
-      <Field label="Kind of property">
+      <Field label={u.pf_kind}>
         <select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}>
           {PROPERTY_KINDS[ptype].map((k) => <option key={k}>{k}</option>)}
         </select>
       </Field>
-      <Field label="Number of rooms">
+      <Field label={u.pf_rooms}>
         <select style={inputStyle}>
           <option>1 room</option><option>2 rooms</option><option>3 rooms</option><option>4 rooms</option><option>5+ rooms</option>
           <option>Not applicable (shop / office / warehouse)</option>
         </select>
       </Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Floor">
+        <Field label={u.pf_floor}>
           <select style={inputStyle}>
             <option>Ground floor</option><option>1st floor</option><option>2nd floor</option><option>3rd floor</option>
             <option>4th floor</option><option>5th floor</option><option>6th floor or higher</option><option>Not applicable</option>
           </select>
         </Field>
-        <Field label="Block / building no. (optional)">
+        <Field label={u.pf_block}>
           <input style={inputStyle} placeholder="e.g. Block B12" />
         </Field>
       </div>
-      <Field label="Area in square metres (m²)">
+      <Field label={u.pf_area}>
         <input style={inputStyle} type="number" min="1" placeholder="e.g. 85" />
       </Field>
-      <Field label="Features — select all that apply">
+      <Field label={u.pf_features}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FEATURE_OPTIONS.map((f) => (
             <Chip key={f} small active={feat.includes(f)} onClick={() => toggleFeat(f)}>{feat.includes(f) ? "✓ " : ""}{f}</Chip>
           ))}
         </div>
       </Field>
-      <Field label="Description / ዝርዝር መግለጫ">
+      <Field label={u.pf_description}>
         <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }}
           placeholder="e.g. Ground floor, 2 rooms in a quiet shared compound near the bus station. Water comes daily, separate electric meter, 10 minutes walk to the market…" />
       </Field>
-      <Field label="Region">
+      <Field label={u.pf_region}>
         <select style={inputStyle} value={regionSel} onChange={(e) => pickRegion(e.target.value)}>
           {LOCATIONS.map((r) => <option key={r.region} value={r.region}>{r.region}</option>)}
         </select>
       </Field>
-      <Field label="City / town">
+      <Field label={u.pf_city}>
         <select style={inputStyle} value={citySel} onChange={(e) => setCitySel(e.target.value)}>
           {regionCities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
         </select>
       </Field>
-      <Field label="Neighbourhood / ሰፈር">
+      <Field label={u.pf_neighbourhood}>
         <input style={inputStyle} placeholder={`e.g. ${cityObj.hoods[0]}`} list="hood-suggestions" />
         <datalist id="hood-suggestions">
           {cityObj.hoods.map((h) => <option key={h} value={h} />)}
         </datalist>
       </Field>
-      <Field label="Monthly rent (ETB)"><input style={inputStyle} type="number" placeholder="e.g. 25000" /></Field>
-      <Field label="Title"><input style={inputStyle} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
-      <Field label="Contact phone for this listing (optional)">
+      <Field label={u.pf_rent}><input style={inputStyle} type="number" placeholder="e.g. 25000" /></Field>
+      <Field label={u.pf_titleField}><input style={inputStyle} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
+      <Field label={u.pf_contactPhone}>
         <input style={inputStyle} inputMode="tel" placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
           Leave empty to use your registered contact{account ? <> (<strong>{account.contact}</strong>)</> : ""}. Fill this only if tenants should reach you on a different number for this property.
         </div>
       </Field>
-      <Field label="Property location — set the pin">
+      <Field label={u.pf_location}>
         <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button type="button" onClick={useMyLocation} style={{ ...btnPrimary, padding: "8px 12px" }}>📍 Use my current location</button>
-          <span style={{ fontSize: 12, color: T.mute }}>or tap the map to place the pin, then drag it to adjust</span>
+          <button type="button" onClick={useMyLocation} style={{ ...btnPrimary, padding: "8px 12px" }}>{u.pf_useLocation}</button>
+          <span style={{ fontSize: 12, color: T.mute }}>{u.pf_orTapMap}</span>
         </div>
         {geoMsg && <div style={{ fontSize: 12.5, color: T.danger, marginBottom: 8 }}>{geoMsg}</div>}
         <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
@@ -745,20 +861,21 @@ function PostForm({ role, onDone, account }) {
         {coords && (
           <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 10, fontSize: 13, cursor: "pointer" }}>
             <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 2 }} />
-            <span>I confirm this pin is the actual location of the property <span style={{ color: T.mute }}>({coords.lat.toFixed(5)}, {coords.lng.toFixed(5)})</span></span>
+            <span>{u.pf_confirmPin} <span style={{ color: T.mute }}>({coords.lat.toFixed(5)}, {coords.lng.toFixed(5)})</span></span>
           </label>
         )}
       </Field>
       {formErr && <div style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{formErr}</div>}
       <button onClick={submitListing} style={{ width: "100%", padding: "12px", borderRadius: 8, border: "none", background: T.gold, color: T.ink, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-        Submit for verification
+        {u.pf_submit}
       </button>
     </>
   );
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
+function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang }) {
+  const u = UI[lang];
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
   const [hood, setHood] = useState(null);
@@ -799,12 +916,12 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
 
   const body = tab === "saved" ? (
     <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 20px 50px" }}>
-      <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>Saved listings</h2>
-      <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>You'll get a notification if a saved listing's price changes or it's rented out.</p>
+      <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>{u.saved_title}</h2>
+      <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>{u.saved_subtitle}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>Nothing saved yet — tap the heart on any listing.</div>}
+        {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>{u.saved_empty}</div>}
         {LISTINGS.filter((l) => saved.includes(l.id)).map((l) => (
-          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode onChat={setChatListing} />
+          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode onChat={setChatListing} lang={lang} />
         ))}
       </div>
     </div>
@@ -813,10 +930,10 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
       {/* Location ladder */}
       <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "16px 18px", marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 15 }}>Where?</span>
-          <span style={{ fontSize: 12, color: T.mute }}>{region || "Region"} ▸ {city || "City"} ▸ {hood || "Neighbourhood"}</span>
+          <span style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 15 }}>{u.where}</span>
+          <span style={{ fontSize: 12, color: T.mute }}>{region || u.region} ▸ {city || u.city} ▸ {hood || u.neighbourhood}</span>
           {(region || city || hood) && (
-            <button onClick={() => clearFrom(0)} style={{ marginLeft: "auto", fontSize: 12, color: T.danger, background: "none", border: "none", cursor: "pointer" }}>Clear location</button>
+            <button onClick={() => clearFrom(0)} style={{ marginLeft: "auto", fontSize: 12, color: T.danger, background: "none", border: "none", cursor: "pointer" }}>{u.clearLocation}</button>
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: region ? 12 : 0 }}>
@@ -852,12 +969,12 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-          <span style={{ color: T.mute }}>Max rent</span>
+          <span style={{ color: T.mute }}>{u.maxRent}</span>
           <input type="range" min={5000} max={150000} step={5000} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} style={{ accentColor: T.forest }} />
           <strong>{fmtETB(maxPrice)}/mo</strong>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 13, color: T.mute }}>
-          <strong style={{ color: T.ink }}>{results.length}</strong> listing{results.length !== 1 ? "s" : ""} · newest first
+          {u.resultsCount(results.length)}
         </span>
       </section>
 
@@ -865,12 +982,12 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
-              No listings match these filters yet. Widen the price range or clear the neighbourhood filter.
+              {u.noResults}
             </div>
           )}
           {results.map((l) => (
             <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected}
-              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode onChat={setChatListing} />
+              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode onChat={setChatListing} lang={lang} />
           ))}
         </section>
         <MapPanel results={results} selected={selected} setSelected={setSelected} />
@@ -888,6 +1005,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
           me="tenant"
           onSend={(text) => sendMessage(chatListing.id, meName, "tenant", text)}
           onClose={() => setChatListing(null)}
+          lang={lang}
         />
       )}
     </>
@@ -895,7 +1013,8 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId }) {
 }
 
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
-function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
+function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang }) {
+  const u = UI[lang];
   const me = DEMO[role];
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
@@ -916,21 +1035,21 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
     body = (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "26px 20px 60px" }}>
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "22px 24px" }}>
-          <PostForm role={role} onDone={() => setTab("listings")} account={account} />
+          <PostForm role={role} onDone={() => setTab("listings")} account={account} lang={lang} />
         </div>
       </div>
     );
   } else if (tab === "inquiries") {
     body = (
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "22px 20px 50px" }}>
-        <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>Tenant inquiries</h2>
+        <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>{u.inquiries_title}</h2>
         <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
-          Reply fast — listings that respond within 2 hours rank higher in tenant search.
+          {u.inquiries_subtitle}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {myThreads.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
-              No inquiries yet.
+              {u.inquiries_empty}
             </div>
           )}
           {myThreads.map((t) => {
@@ -965,19 +1084,19 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "22px 20px 50px" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
           <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: 0 }}>
-            {isBroker ? "My portfolio" : "My properties"}
+            {isBroker ? u.nav_listings_broker : u.nav_listings_landlord}
           </h2>
-          <span style={{ fontSize: 13, color: T.mute }}>Signed in as <strong>{me}</strong> <span style={{ color: T.forest }}>✓ verified</span></span>
+          <span style={{ fontSize: 13, color: T.mute }}>{u.signedInAs} <strong>{me}</strong> <span style={{ color: T.forest }}>{u.verifiedTag}</span></span>
         </div>
         <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
-          {isBroker ? "Listings you manage on behalf of owners. Owner details stay private to you." : "Listings you own and manage directly."}
+          {isBroker ? u.brokerNote : u.landlordNote}
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
           {[
-            { n: mine.length, l: "Active listings" },
-            { n: totalViews, l: "Views this month" },
-            { n: myThreads.length, l: "Open inquiries" },
+            { n: mine.length, l: u.stat_active },
+            { n: totalViews, l: u.stat_views },
+            { n: myThreads.length, l: u.stat_inquiries },
             isBroker
               ? { n: new Set(mine.map((x) => x.owner)).size, l: "Owner clients" }
               : { n: mine.filter((x) => x.type === "Business").length, l: "Business units" },
@@ -1040,6 +1159,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
           me="lister"
           onSend={(text) => sendMessage(openThread.listingId, openThread.tenant, "lister", text)}
           onClose={() => setOpenThreadId(null)}
+          lang={lang}
         />
       )}
     </>
@@ -1048,20 +1168,26 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account }) {
 
 /* ================= ROOT ================= */
 export default function KirayApp() {
-  // A link like ?listing=7 (sent by the Telegram bot's "Chat in app" button)
-  // should land straight on that listing's chat — read it once, then scrub
-  // the URL so switching roles/tabs afterward behaves normally.
-  const deepLinkListingId = useMemo(() => {
-    const id = new URLSearchParams(window.location.search).get("listing");
-    return id ? Number(id) : null;
+  // Links from the Telegram bot land here:
+  //   ?listing=7            -> tenant, that listing's chat open
+  //   ?role=landlord&tab=post|listings -> straight into the landlord/broker dashboard
+  // Read once, then scrub the URL so switching roles/tabs afterward behaves normally.
+  const deepLink = useMemo(() => {
+    const p = new URLSearchParams(window.location.search);
+    const listingId = p.get("listing") ? Number(p.get("listing")) : null;
+    const role = ["tenant", "landlord", "broker"].includes(p.get("role")) ? p.get("role") : null;
+    const tab = p.get("tab");
+    return { listingId, role, tab };
   }, []);
   useEffect(() => {
-    if (deepLinkListingId) window.history.replaceState({}, "", window.location.pathname);
-  }, [deepLinkListingId]);
+    if (deepLink.listingId || deepLink.role) window.history.replaceState({}, "", window.location.pathname);
+  }, [deepLink.listingId, deepLink.role]);
 
-  const [role, setRole] = useState(deepLinkListingId ? "tenant" : null);
+  const initialRole = deepLink.listingId ? "tenant" : deepLink.role;
+  const [lang, setLang] = useState("en");
+  const [role, setRole] = useState(initialRole || null);
   const [account, setAccount] = useState(null);
-  const [tab, setTab] = useState("browse");
+  const [tab, setTab] = useState(deepLink.tab || (initialRole === "tenant" ? "browse" : initialRole ? "listings" : "browse"));
   /* Opened inside Telegram? Pick up the visitor's profile automatically.
      Opened in a browser? Everyone is a guest — nothing is asked. */
   useTelegramProfile(setAccount);
@@ -1084,23 +1210,24 @@ export default function KirayApp() {
   const enterAs = (r) => { setRole(r); setTab(r === "tenant" ? "browse" : "listings"); };
 
   if (!role) {
-    return <RoleGate onPick={enterAs} />;
+    return <RoleGate onPick={enterAs} lang={lang} setLang={setLang} />;
   }
 
+  const u = UI[lang];
   const tabsByRole = {
-    tenant: [{ key: "browse", label: "Find a rental" }, { key: "saved", label: "Saved ❤" }],
-    landlord: [{ key: "listings", label: "My properties" }, { key: "inquiries", label: "Inquiries" }, { key: "post", label: "+ New listing" }],
-    broker: [{ key: "listings", label: "My portfolio" }, { key: "inquiries", label: "Inquiries" }, { key: "post", label: "+ New listing" }],
+    tenant: [{ key: "browse", label: u.nav_browse }, { key: "saved", label: u.nav_saved }],
+    landlord: [{ key: "listings", label: u.nav_listings_landlord }, { key: "inquiries", label: u.nav_inquiries }, { key: "post", label: u.nav_post }],
+    broker: [{ key: "listings", label: u.nav_listings_broker }, { key: "inquiries", label: u.nav_inquiries }, { key: "post", label: u.nav_post }],
   };
 
   return (
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
-      <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} />
+      <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} lang={lang} setLang={setLang} />
       {role === "tenant"
-        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} initialChatListingId={deepLinkListingId} />
-        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} />}
+        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} initialChatListingId={deepLink.listingId} lang={lang} />
+        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
-        Kiray · ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
+        Ethio Kiray · ኢትዮ ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
       </footer>
     </div>
   );
