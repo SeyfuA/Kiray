@@ -7,11 +7,14 @@
    2. Add this bot as an ADMIN of that channel with "Post Messages" allowed
       (Channel -> channel name -> Administrators -> Add Admin -> your bot).
       This step can't be done from code — it's a Telegram app action.
-   3. Add two environment variables on Vercel:
-        KIRAY_CHANNEL_ID — the channel's @username (public channels — easiest),
-                            or its numeric id like -1001234567890 (private
-                            channels; see README-TELEGRAM.md for how to find it)
-        CRON_SECRET      — any random string, 16+ characters
+   3. Add three environment variables on Vercel:
+        KIRAY_CHANNEL_ID  — the channel's @username (public channels — easiest),
+                             or its numeric id like -1001234567890 (private
+                             channels; see README-TELEGRAM.md for how to find it)
+        KIRAY_BOT_USERNAME — the bot's @username, WITHOUT the @
+                             (e.g. EthioKirayBot) — powers the "Chat via bot"
+                             links; without it those buttons are just omitted
+        CRON_SECRET       — any random string, 16+ characters
    4. Deploy. Vercel reads vercel.json and registers the daily schedule
       automatically — nothing else to run or trigger by hand.
 
@@ -37,6 +40,15 @@ import { LISTINGS } from "../src/data/listings.js";
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const APP_URL = process.env.KIRAY_APP_URL;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
+const BOT_USERNAME = process.env.KIRAY_BOT_USERNAME; // e.g. "EthioKirayBot", no "@"
+
+// Deep-links into a private chat with the bot. Telegram opens the chat and
+// sends "/start <payload>" as the first message — the webhook reads that
+// payload to jump straight to the listing instead of a generic menu.
+function botLink(payload) {
+  if (!BOT_USERNAME) return null;
+  return `https://t.me/${BOT_USERNAME}${payload ? `?start=${payload}` : ""}`;
+}
 
 const birr = (n) => `${n.toLocaleString("en-US")} ETB/month`;
 
@@ -74,11 +86,15 @@ function seededRandom(seed) {
   };
 }
 
+// Change this to widen/narrow the digest to a different city or region later.
+const DIGEST_CITY = "Addis Ababa";
+
 function pickDailyListings() {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
   const rand = seededRandom(today);
-  const shuffled = [...LISTINGS].sort(() => rand() - 0.5);
-  const count = 3 + Math.floor(rand() * 3); // 3, 4, or 5 — varies day to day
+  const pool = LISTINGS.filter((l) => l.city === DIGEST_CITY);
+  const shuffled = [...pool].sort(() => rand() - 0.5);
+  const count = Math.min(3 + Math.floor(rand() * 3), shuffled.length); // 3-5, capped to what's available
   return { today, picks: shuffled.slice(0, count) };
 }
 
@@ -127,8 +143,11 @@ function formatListing(l) {
 }
 
 function listingButtons(l) {
-  if (!APP_URL) return undefined;
-  return { inline_keyboard: [[{ text: "🌍 View in app · በመተግበሪያ ይመልከቱ", url: `${APP_URL}?listing=${l.id}` }]] };
+  const rows = [];
+  if (APP_URL) rows.push([{ text: "🌍 View in app · በመተግበሪያ ይመልከቱ", url: `${APP_URL}?listing=${l.id}` }]);
+  const bl = botLink(`listing_${l.id}`);
+  if (bl) rows.push([{ text: "💬 Chat via bot · በቦት ይወያዩ", url: bl }]);
+  return rows.length ? { inline_keyboard: rows } : undefined;
 }
 
 /* ---------- entry point ---------- */
@@ -160,11 +179,15 @@ export default async function handler(req, res) {
     await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
-  if (APP_URL) {
+  const footerRows = [];
+  if (APP_URL) footerRows.push([{ text: "🌍 Open Ethio Kiray app", url: APP_URL }]);
+  const fullBotLink = botLink();
+  if (fullBotLink) footerRows.push([{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]);
+  if (footerRows.length) {
     await sendMessage(
       CHANNEL_ID,
-      "See everything on the map 👇 · ሁሉንም በካርታ ይመልከቱ",
-      { reply_markup: { inline_keyboard: [[{ text: "🌍 Open Ethio Kiray", url: APP_URL }]] } },
+      "Browse the full map, or ask the bot for listings by region 👇\nሙሉ ካርታውን ይመልከቱ ወይም ቦቱን በክልል ይጠይቁ 👇",
+      { reply_markup: { inline_keyboard: footerRows } },
       "footer"
     );
   }
