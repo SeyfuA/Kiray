@@ -41,6 +41,8 @@ const UI = {
     pf_propertyType: "Property type", pf_kind: "Kind of property", pf_rooms: "Number of rooms",
     pf_floor: "Floor", pf_block: "Block / building no. (optional)", pf_area: "Area in square metres (m²)",
     pf_features: "Features — select all that apply", pf_description: "Description",
+    pf_photos: "Photos (up to 7)", pf_addPhotos: "+ Add photos", pf_photoCount: (n) => `${n}/7 photos added`,
+    pf_photosHint: "Clear photos help listings get more inquiries. Stay in this browser session only — connecting cloud storage is a next step.",
     pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Neighbourhood",
     pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing (optional)",
     pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
@@ -81,6 +83,8 @@ const UI = {
     pf_propertyType: "የንብረት አይነት", pf_kind: "የንብረት ዓይነት", pf_rooms: "የክፍሎች ብዛት",
     pf_floor: "ፎቅ", pf_block: "ብሎክ / ህንፃ ቁጥር (አማራጭ)", pf_area: "ስፋት በካሬ ሜትር (m²)",
     pf_features: "ገፅታዎች — ተገቢውን ሁሉ ይምረጡ", pf_description: "ዝርዝር መግለጫ",
+    pf_photos: "ፎቶዎች (እስከ 7)", pf_addPhotos: "+ ፎቶ ጨምር", pf_photoCount: (n) => `${n}/7 ፎቶዎች ታክለዋል`,
+    pf_photosHint: "ግልጽ ፎቶዎች ማስታወቂያዎች ተጨማሪ ጥያቄ እንዲያገኙ ይረዳሉ። ለአሁኑ በዚህ ብራውዘር ክፍለ ጊዜ ብቻ ይቆያሉ — ወደ ደመና ማከማቻ ማገናኘት ቀጣይ እርምጃ ነው።",
     pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ሰፈር",
     pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ (አማራጭ)",
     pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
@@ -392,6 +396,35 @@ function CallButton({ phone, label }) {
 /* ================= CHAT MODAL =================
    me = "tenant" | "lister". Messages live in shared root state, so a message
    sent as a tenant shows up in the landlord/broker Inquiries after switching roles. */
+/* ================= PHOTO GALLERY (up to 7 photos per listing) ================= */
+function PhotoGallery({ photos, title, onClose }) {
+  const [i, setI] = useState(0);
+  const prev = (e) => { e.stopPropagation(); setI((n) => (n - 1 + photos.length) % photos.length); };
+  const next = (e) => { e.stopPropagation(); setI((n) => (n + 1) % photos.length); };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.86)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <button onClick={onClose} style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#fff", fontSize: 26, cursor: "pointer", lineHeight: 1 }}>✕</button>
+      <div style={{ color: "#fff", fontSize: 13, marginBottom: 10, opacity: 0.85 }}>{title} · {i + 1} / {photos.length}</div>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "92vw", maxHeight: "78vh", display: "flex", alignItems: "center", gap: 10 }}>
+        {photos.length > 1 && (
+          <button onClick={prev} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>‹</button>
+        )}
+        <img src={photos[i]} alt={`${title} photo ${i + 1}`} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 10, objectFit: "contain", background: "#000" }} />
+        {photos.length > 1 && (
+          <button onClick={next} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>›</button>
+        )}
+      </div>
+      {photos.length > 1 && (
+        <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap", justifyContent: "center", maxWidth: "92vw" }}>
+          {photos.map((p, idx) => (
+            <img key={idx} src={p} onClick={() => setI(idx)} alt="" style={{ width: 46, height: 34, objectFit: "cover", borderRadius: 5, cursor: "pointer", opacity: idx === i ? 1 : 0.5, border: idx === i ? "2px solid #fff" : "2px solid transparent" }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChatModal({ thread, listing, me, onSend, onClose, lang = "en" }) {
   const u = UI[lang];
   const startHint = lang === "am"
@@ -616,8 +649,10 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
 }
 
 /* ================= LISTING CARD (shared) ================= */
-function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, onChat }) {
+function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, onChat, lang = "en" }) {
   const isSel = selected === l.id;
+  const [gallery, setGallery] = useState(false);
+  const hasPhotos = l.photos && l.photos.length > 0;
   return (
     <article onClick={() => onSelect(isSel ? null : l.id)} style={{
       background: T.card, borderRadius: 14, padding: "14px 16px", cursor: "pointer",
@@ -625,6 +660,15 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
       boxShadow: isSel ? "0 4px 14px rgba(14,59,46,.12)" : "none",
       transition: "all .15s ease",
     }}>
+      {hasPhotos && (
+        <div onClick={(e) => { e.stopPropagation(); setGallery(true); }} style={{ position: "relative", margin: "-14px -16px 10px", borderRadius: "14px 14px 0 0", overflow: "hidden", cursor: "pointer" }}>
+          <img src={l.photos[0]} alt={l.title} style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }} />
+          <span style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, display: "flex", alignItems: "center", gap: 4 }}>
+            📷 {l.photos.length}/7
+          </span>
+        </div>
+      )}
+      {gallery && <PhotoGallery photos={l.photos} title={l.title} onClose={() => setGallery(false)} />}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
         <h3 style={{ margin: 0, fontFamily: displayFont, fontSize: 15.5, fontWeight: 700 }}>{l.title}</h3>
         <strong style={{ color: T.forest, whiteSpace: "nowrap", fontSize: 15 }}>
@@ -702,6 +746,20 @@ function PostForm({ role, onDone, account, lang = "en" }) {
   const [regionSel, setRegionSel] = useState(LOCATIONS[0].region);
   const [citySel, setCitySel] = useState(LOCATIONS[0].cities[0].name);
   const [feat, setFeat] = useState([]);
+  const [photos, setPhotos] = useState([]); // { url, file } — up to 7, kept in-memory (no backend yet)
+  const photoInputRef = useRef(null);
+  const addPhotos = (fileList) => {
+    const room = 7 - photos.length;
+    const chosen = Array.from(fileList).slice(0, room);
+    const next = chosen.map((file) => ({ url: URL.createObjectURL(file), file }));
+    setPhotos((prev) => [...prev, ...next]);
+  };
+  const removePhoto = (idx) => {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[idx].url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
   const [coords, setCoords] = useState(null);      // { lat, lng } of the property
   const [confirmed, setConfirmed] = useState(false); // lister confirmed the pin
   const [geoMsg, setGeoMsg] = useState("");
@@ -815,6 +873,27 @@ function PostForm({ role, onDone, account, lang = "en" }) {
       <Field label={u.pf_description}>
         <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }}
           placeholder="e.g. Ground floor, 2 rooms in a quiet shared compound near the bus station. Water comes daily, separate electric meter, 10 minutes walk to the market…" />
+      </Field>
+      <Field label={`${u.pf_photos} — ${u.pf_photoCount(photos.length)}`}>
+        <input ref={photoInputRef} type="file" accept="image/*" multiple hidden
+          onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {photos.map((p, idx) => (
+            <div key={p.url} style={{ position: "relative", width: 84, height: 84, borderRadius: 8, overflow: "hidden", border: `1px solid ${T.line}` }}>
+              <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <button type="button" onClick={() => removePhoto(idx)} title="Remove"
+                style={{ position: "absolute", top: 3, right: 3, width: 20, height: 20, borderRadius: "50%", border: "none", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 12, cursor: "pointer", lineHeight: "20px", padding: 0 }}>✕</button>
+              {idx === 0 && <span style={{ position: "absolute", bottom: 3, left: 3, fontSize: 9.5, fontWeight: 700, background: "rgba(255,255,255,.9)", color: T.forest, padding: "1px 5px", borderRadius: 999 }}>COVER</span>}
+            </div>
+          ))}
+          {photos.length < 7 && (
+            <button type="button" onClick={() => photoInputRef.current?.click()} style={{
+              width: 84, height: 84, borderRadius: 8, border: `1.5px dashed ${T.line}`, background: T.paper,
+              color: T.mute, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 4,
+            }}>{u.pf_addPhotos}</button>
+          )}
+        </div>
+        <div style={{ fontSize: 11.5, color: T.mute, marginTop: 6, lineHeight: 1.4 }}>{u.pf_photosHint}</div>
       </Field>
       <Field label={u.pf_region}>
         <select style={inputStyle} value={regionSel} onChange={(e) => pickRegion(e.target.value)}>

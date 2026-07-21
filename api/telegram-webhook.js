@@ -290,6 +290,30 @@ async function sendVenuePin(chatId, l) {
   });
 }
 
+// Sends up to 7 photos for a listing — as a single photo if there's only
+// one, or as a native Telegram album (sendMediaGroup) if there are more.
+// Same photos array the app's PostForm/gallery use, so both stay in sync.
+async function sendPhotoAlbum(chatId, l) {
+  const photos = (l.photos || []).slice(0, 7);
+  if (photos.length === 0) return;
+  if (photos.length === 1) {
+    await fetch(`${API()}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, photo: photos[0], caption: l.title }),
+    });
+    return;
+  }
+  await fetch(`${API()}/sendMediaGroup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      media: photos.map((url, i) => ({ type: "photo", media: url, ...(i === 0 ? { caption: l.title } : {}) })),
+    }),
+  });
+}
+
 async function answerCallbackQuery(id, options = {}) {
   await fetch(`${API()}/answerCallbackQuery`, {
     method: "POST",
@@ -342,6 +366,7 @@ async function sendCityListings(chatId, lang, regionIdx, cityIdx) {
 
   await sendMessage(chatId, s.city_listings_header(city, region, results.length, shown.length));
   for (const l of shown) {
+    await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
     await sendMessage(chatId, formatListing(l, lang), { reply_markup: listingKeyboard(lang, l) });
   }
@@ -369,6 +394,7 @@ async function sendTopListings(chatId, lang, query = "") {
   const shown = results.slice(0, TOP_COUNT);
   await sendMessage(chatId, s.top_listings(shown.length, query, results.length));
   for (const l of shown) {
+    await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
     await sendMessage(chatId, formatListing(l, lang), { reply_markup: listingKeyboard(lang, l) });
   }
@@ -433,6 +459,7 @@ async function sendMyListingsPreview(chatId, lang, role) {
 
   await sendMessage(chatId, s.my_listings_header(name, mine.length));
   for (const l of mine.slice(0, TOP_COUNT)) {
+    await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
     await sendMessage(chatId, `${formatListing(l, lang)}\n${s.views(l.views)}`, {
       reply_markup: APP_URL
