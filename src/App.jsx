@@ -205,7 +205,6 @@ const LOCATIONS = [
 
 /* Demo accounts: the landlord demo signs in as W/ro Almaz, the broker demo as Meskerem B. */
 const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
-const TENANT_ME = "You (visitor)";
 
 /* Options for the posting form */
 const PROPERTY_KINDS = {
@@ -385,6 +384,24 @@ const btnPrimary = { padding: "8px 14px", borderRadius: 8, border: "none", backg
 const btnGhost = { padding: "8px 14px", borderRadius: 8, border: `1px solid ${T.forest}`, background: "#fff", color: T.forest, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: bodyFont };
 
 /* Call button — a real tel: link. On a phone it opens the dialer with the number ready. */
+/* ================= OPEN A REAL TELEGRAM CHAT =================
+   The in-app "chat" was never actually connected to anything — messages
+   only lived in this browser's memory, so a landlord could never really
+   see them. Real conversations happen on Telegram instead: this opens a
+   private chat with the bot, deep-linked to the specific listing, using
+   the same t.me/<bot>?start=listing_<id> pattern the channel digest uses.
+   Requires VITE_TELEGRAM_BOT_USERNAME to be set at build time (Vercel env
+   var, no "@", e.g. VITE_TELEGRAM_BOT_USERNAME=KirrayAppBot) — without it,
+   this quietly does nothing rather than opening a broken link. */
+function openTelegramChat(listingId) {
+  const username = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
+  if (!username) return;
+  const url = `https://t.me/${username}?start=listing_${listingId}`;
+  const tg = window.Telegram?.WebApp;
+  if (tg?.openTelegramLink) tg.openTelegramLink(url); // already inside the Mini App
+  else window.open(url, "_blank", "noopener,noreferrer"); // plain browser visit
+}
+
 function CallButton({ phone, label }) {
   return (
     <a href={`tel:${phone}`} style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
@@ -649,7 +666,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
 }
 
 /* ================= LISTING CARD (shared) ================= */
-function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, onChat, lang = "en" }) {
+function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, lang = "en" }) {
   const isSel = selected === l.id;
   const [gallery, setGallery] = useState(false);
   const hasPhotos = l.photos && l.photos.length > 0;
@@ -715,7 +732,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, o
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
             <CallButton phone={l.phone} />
-            <button style={btnGhost} onClick={() => onChat && onChat(l)}>💬 Chat in app</button>
+            <button style={btnGhost} onClick={() => openTelegramChat(l.id)}>💬 Chat on Telegram · በቴሌግራም ይወያዩ</button>
           </div>
         </div>
       )}
@@ -953,7 +970,7 @@ function PostForm({ role, onDone, account, lang = "en" }) {
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang }) {
+function TenantApp({ tab, initialChatListingId, lang }) {
   const u = UI[lang];
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
@@ -962,12 +979,13 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang
   const [maxPrice, setMaxPrice] = useState(150000);
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState([1, 8]);
-  const [chatListing, setChatListing] = useState(null);
 
+  // Arriving via a deep link (?listing=7, e.g. from the Telegram bot)
+  // highlights that listing so it's easy to find — chatting still happens
+  // through the real "Chat on Telegram" button, a deliberate tap rather
+  // than an automatic redirect (which browsers tend to pop-up-block anyway).
   useEffect(() => {
-    if (!initialChatListingId) return;
-    const l = LISTINGS.find((x) => x.id === initialChatListingId);
-    if (l) { setChatListing(l); setSelected(l.id); }
+    if (initialChatListingId) setSelected(initialChatListingId);
   }, [initialChatListingId]);
 
   const regionObj = LOCATIONS.find((r) => r.region === region);
@@ -991,8 +1009,6 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang
     setSelected(null);
   };
 
-  const chatThread = chatListing ? chats.find((t) => t.listingId === chatListing.id && t.tenant === meName) : null;
-
   const body = tab === "saved" ? (
     <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 20px 50px" }}>
       <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: "0 0 4px" }}>{u.saved_title}</h2>
@@ -1000,7 +1016,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>{u.saved_empty}</div>}
         {LISTINGS.filter((l) => saved.includes(l.id)).map((l) => (
-          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode onChat={setChatListing} lang={lang} />
+          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode lang={lang} />
         ))}
       </div>
     </div>
@@ -1066,7 +1082,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang
           )}
           {results.map((l) => (
             <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected}
-              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode onChat={setChatListing} lang={lang} />
+              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode lang={lang} />
           ))}
         </section>
         <MapPanel results={results} selected={selected} setSelected={setSelected} />
@@ -1074,21 +1090,7 @@ function TenantApp({ tab, chats, sendMessage, meName, initialChatListingId, lang
     </div>
   );
 
-  return (
-    <>
-      {body}
-      {chatListing && (
-        <ChatModal
-          thread={chatThread}
-          listing={chatListing}
-          me="tenant"
-          onSend={(text) => sendMessage(chatListing.id, meName, "tenant", text)}
-          onClose={() => setChatListing(null)}
-          lang={lang}
-        />
-      )}
-    </>
-  );
+  return body;
 }
 
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
@@ -1303,7 +1305,7 @@ export default function KirayApp() {
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
       <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} lang={lang} setLang={setLang} />
       {role === "tenant"
-        ? <TenantApp tab={tab} chats={chats} sendMessage={sendMessage} meName={account ? account.name : TENANT_ME} initialChatListingId={deepLink.listingId} lang={lang} />
+        ? <TenantApp tab={tab} initialChatListingId={deepLink.listingId} lang={lang} />
         : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
         Ethio Kiray · ኢትዮ ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
