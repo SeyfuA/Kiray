@@ -243,7 +243,9 @@ function formatListing(l, lang) {
 }
 
 function listingKeyboard(lang, l) {
-  return { inline_keyboard: [[{ text: STR[lang].contact_btn, callback_data: cd(lang, `contact_${l.id}`) }]] };
+  const rows = [[{ text: STR[lang].contact_btn, callback_data: cd(lang, `contact_${l.id}`) }]];
+  if (APP_URL) rows.push([{ text: STR[lang].view_in_app_btn, web_app: { url: `${APP_URL}?listing=${l.id}` } }]);
+  return { inline_keyboard: rows };
 }
 
 function startKeyboard(lang) {
@@ -412,6 +414,8 @@ async function sendContactCard(chatId, lang, listing) {
   // just a formatting issue). Phone numbers in plain message text are
   // auto-detected and tappable-to-dial on Telegram's own clients instead,
   // so the number goes in the text rather than a button.
+  // No venue pin or "View in app" button here — both already appeared
+  // alongside the listing card itself, one message earlier.
   const lines = [
     s.contact_for(listing.title),
     `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · ${listing.owner}` : ""}`,
@@ -419,12 +423,7 @@ async function sendContactCard(chatId, lang, listing) {
     `${s.call_btn}: ${listing.phone}`,
   ].filter(Boolean);
 
-  const rows = [];
-  if (APP_URL) {
-    rows.push([{ text: s.view_in_app_btn, web_app: { url: `${APP_URL}?listing=${listing.id}` } }]);
-  }
-  await sendVenuePin(chatId, listing);
-  await sendMessage(chatId, lines.join("\n"), rows.length ? { reply_markup: { inline_keyboard: rows } } : {});
+  await sendMessage(chatId, lines.join("\n"));
 }
 
 /* ---------- landlord / broker section ---------- */
