@@ -57,7 +57,7 @@ const STR = {
     contact_for: (title) => `📇 <b>Contact for:</b> ${title}`,
     verified: "✅ Verified lister",
     call_btn: "📞 Call",
-    chat_in_app_btn: "💬 Chat in Ethio Kiray app",
+    view_in_app_btn: "🌍 View full listing in app",
     listing_unavailable: "That listing isn't available anymore.",
     beds: (n) => `${n} bed${n > 1 ? "s" : ""}`,
     etb_month: (n) => `${n.toLocaleString("en-US")} ETB/month`,
@@ -72,7 +72,7 @@ const STR = {
         "• /listings Piassa — search by neighbourhood",
         "• /listings office — search by property type",
         "",
-        "Tap <b>📞 Contact & chat</b> on any listing to call the owner or broker, or open a chat with them right inside the Ethio Kiray app.",
+        "Tap <b>📞 Contact & chat</b> on any listing to see the owner's or broker's phone number, or view the full listing in the app.",
         "✅ means the lister is verified.",
         `📍 ${regionCount} regions currently listed.`,
       ].join("\n"),
@@ -118,7 +118,7 @@ const STR = {
     contact_for: (title) => `📇 <b>የመገናኛ መረጃ ለ:</b> ${title}`,
     verified: "✅ የተረጋገጠ አከራይ/ደላላ",
     call_btn: "📞 ደውል",
-    chat_in_app_btn: "💬 በመተግበሪያው ውስጥ ይወያዩ",
+    view_in_app_btn: "🌍 ሙሉ ማስታወቂያ በመተግበሪያው ይመልከቱ",
     listing_unavailable: "ይህ ማስታወቂያ ከአሁን በኋላ አይገኝም።",
     beds: (n) => `${n} መኝታ ቤት${n > 1 ? "ዎች" : ""}`,
     etb_month: (n) => `${n.toLocaleString("en-US")} ብር/ወር`,
@@ -133,7 +133,7 @@ const STR = {
         "• /listings ፒያሳ — በሰፈር ይፈልጉ",
         "• /listings ሱቅ — በአይነት ይፈልጉ",
         "",
-        "በማንኛውም ማስታወቂያ ላይ <b>📞 አግኙ እና ይወያዩ</b> ን ይጫኑ አከራዩን ወይም ደላላውን ለመደወል ወይም በኢትዮ ኪራይ መተግበሪያ ውስጥ ቀጥታ ለመወያየት።",
+        "በማንኛውም ማስታወቂያ ላይ <b>📞 አግኙ እና ይወያዩ</b> ን ይጫኑ የአከራዩን ወይም የደላላውን ስልክ ቁጥር ለማየት፣ ወይም ሙሉ ማስታወቂያውን በመተግበሪያው ለማየት።",
         "✅ ማለት ሻጩ/አከራዩ የተረጋገጠ ነው ማለት ነው።",
         `📍 በአሁኑ ጊዜ ${regionCount} ክልሎች ተዘርዝረዋል።`,
       ].join("\n"),
@@ -421,7 +421,7 @@ async function sendContactCard(chatId, lang, listing) {
 
   const rows = [];
   if (APP_URL) {
-    rows.push([{ text: s.chat_in_app_btn, web_app: { url: `${APP_URL}?listing=${listing.id}` } }]);
+    rows.push([{ text: s.view_in_app_btn, web_app: { url: `${APP_URL}?listing=${listing.id}` } }]);
   }
   await sendVenuePin(chatId, listing);
   await sendMessage(chatId, lines.join("\n"), rows.length ? { reply_markup: { inline_keyboard: rows } } : {});
@@ -535,6 +535,17 @@ export default async function handler(req, res) {
     const lang = detectLang(update);
 
     if (text.startsWith("/start")) {
+      // Deep link from the channel digest: "t.me/BotName?start=listing_16"
+      // arrives here as the text "/start listing_16" — show that listing
+      // first (with working Contact & chat), then the usual menu below it.
+      const payload = text.replace("/start", "").trim();
+      const match = payload.match(/^listing_(\d+)$/);
+      const linkedListing = match ? findListing(match[1]) : null;
+      if (linkedListing) {
+        await sendPhotoAlbum(chatId, linkedListing);
+        await sendVenuePin(chatId, linkedListing);
+        await sendMessage(chatId, formatListing(linkedListing, lang), { reply_markup: listingKeyboard(lang, linkedListing) });
+      }
       await sendStartMenu(chatId, lang);
     } else if (text.startsWith("/help")) {
       await sendMessage(chatId, STR[lang].help(getRegions().length), {
