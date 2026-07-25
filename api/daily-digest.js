@@ -18,15 +18,22 @@
    4. Deploy. Vercel reads vercel.json and registers the daily schedule
       automatically — nothing else to run or trigger by hand.
 
-   Reuses the same TELEGRAM_BOT_TOKEN / KIRAY_APP_URL as the main bot, and
-   the same LISTINGS data as the app, so prices/photos/pins always match
-   what's live in the app.
+   Reuses the same TELEGRAM_BOT_TOKEN as the main bot, and the same
+   LISTINGS data as the app, so prices/photos/pins always match what's
+   live in the app.
 
-   Button design note: unlike the private-chat bot, channel posts can only
-   use plain "url" buttons — Telegram restricts callback_data replies and
-   web_app buttons to private chats. "Open Ethio Kiray" links straight to
-   the app instead, and works for every viewer regardless of whether
-   they've started the bot.
+   Button design note: channel posts can't use a real Telegram Mini App
+   button (that's a private-chat-only feature — Telegram restricts both
+   callback_data replies and web_app buttons to private chats). A plain
+   https:// link to the app would open a generic browser tab, not the
+   native in-app experience, so this file deliberately doesn't offer that
+   as if it were equivalent. Instead, every listing's button opens a
+   private chat with the bot — a genuine Telegram-native path, where the
+   real Mini App and Contact & chat features do work — deep-linked
+   straight to that listing. The phone number is always in the message
+   text too, for anyone who'd rather just call. If KIRAY_BOT_USERNAME
+   isn't set, listings simply post with no button — the phone number in
+   the text is still there either way.
 
    Selection is deterministic per UTC day (seeded by today's date), so if
    Vercel's cron ever fires twice in the same day — a known possibility,
@@ -38,7 +45,6 @@
 import { LISTINGS } from "../src/data/listings.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const APP_URL = process.env.KIRAY_APP_URL;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
 const BOT_USERNAME = process.env.KIRAY_BOT_USERNAME; // e.g. "EthioKirayBot", no "@"
 
@@ -142,12 +148,16 @@ function formatListing(l) {
   return lines.join("\n");
 }
 
+// The channel can't use a real Telegram Mini App button (that's a
+// private-chat-only feature — see the note at the top of this file), so a
+// plain https:// link here would just open a regular browser tab, not the
+// native in-app experience. Rather than pass that off as "the app," the
+// only button is the genuine Telegram path — chatting with the bot, where
+// the real Mini App and Contact & chat features do work. The phone number
+// is already in the message text above for anyone who'd rather just call.
 function listingButtons(l) {
-  const rows = [];
-  if (APP_URL) rows.push([{ text: "🌍 View in app · በመተግበሪያ ይመልከቱ", url: `${APP_URL}?listing=${l.id}` }]);
   const bl = botLink(`listing_${l.id}`);
-  if (bl) rows.push([{ text: "💬 Chat via bot · በቦት ይወያዩ", url: bl }]);
-  return rows.length ? { inline_keyboard: rows } : undefined;
+  return bl ? { inline_keyboard: [[{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]] } : undefined;
 }
 
 /* ---------- entry point ---------- */
@@ -179,15 +189,12 @@ export default async function handler(req, res) {
     await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
-  const footerRows = [];
-  if (APP_URL) footerRows.push([{ text: "🌍 Open Ethio Kiray app", url: APP_URL }]);
   const fullBotLink = botLink();
-  if (fullBotLink) footerRows.push([{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]);
-  if (footerRows.length) {
+  if (fullBotLink) {
     await sendMessage(
       CHANNEL_ID,
-      "Browse the full map, or ask the bot for listings by region 👇\nሙሉ ካርታውን ይመልከቱ ወይም ቦቱን በክልል ይጠይቁ 👇",
-      { reply_markup: { inline_keyboard: footerRows } },
+      "Browse more listings by region, right here in Telegram 👇\nበቴሌግራም ውስጥ ተጨማሪ ማስታወቂያዎችን በክልል ይመልከቱ 👇",
+      { reply_markup: { inline_keyboard: [[{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]] } },
       "footer"
     );
   }
