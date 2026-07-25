@@ -7,33 +7,45 @@
    2. Add this bot as an ADMIN of that channel with "Post Messages" allowed
       (Channel -> channel name -> Administrators -> Add Admin -> your bot).
       This step can't be done from code — it's a Telegram app action.
-   3. Add three environment variables on Vercel:
-        KIRAY_CHANNEL_ID  — the channel's @username (public channels — easiest),
+   3. (Optional but recommended) Register a Telegram "Direct Link Mini App"
+      so channel posts can open the real app WITH the visitor's profile —
+      message @BotFather -> /newapp -> pick this bot -> give it a name,
+      description, and 640x360 photo (GIF step: send /empty) -> when asked
+      for the Web App URL, use the same URL as KIRAY_APP_URL -> choose a
+      short name (e.g. "app"). Skipping this step is fine — those specific
+      buttons are just omitted and the bot-chat link still works.
+   4. Add four environment variables on Vercel:
+        KIRAY_CHANNEL_ID   — the channel's @username (public channels — easiest),
                              or its numeric id like -1001234567890 (private
                              channels; see README-TELEGRAM.md for how to find it)
         KIRAY_BOT_USERNAME — the bot's @username, WITHOUT the @
                              (e.g. EthioKirayBot) — powers the "Chat via bot"
                              links; without it those buttons are just omitted
-        CRON_SECRET       — any random string, 16+ characters
-   4. Deploy. Vercel reads vercel.json and registers the daily schedule
+        KIRAY_MINIAPP_SHORTNAME — the short name chosen in step 3 (e.g. "app")
+                             — powers the "Open in app" links; without it
+                             those buttons are just omitted
+        CRON_SECRET        — any random string, 16+ characters
+   5. Deploy. Vercel reads vercel.json and registers the daily schedule
       automatically — nothing else to run or trigger by hand.
 
    Reuses the same TELEGRAM_BOT_TOKEN as the main bot, and the same
    LISTINGS data as the app, so prices/photos/pins always match what's
    live in the app.
 
-   Button design note: channel posts can't use a real Telegram Mini App
-   button (that's a private-chat-only feature — Telegram restricts both
-   callback_data replies and web_app buttons to private chats). A plain
-   https:// link to the app would open a generic browser tab, not the
-   native in-app experience, so this file deliberately doesn't offer that
-   as if it were equivalent. Instead, every listing's button opens a
-   private chat with the bot — a genuine Telegram-native path, where the
-   real Mini App and Contact & chat features do work — deep-linked
-   straight to that listing. The phone number is always in the message
-   text too, for anyone who'd rather just call. If KIRAY_BOT_USERNAME
-   isn't set, listings simply post with no button — the phone number in
-   the text is still there either way.
+   Button design note: channel posts can't use a regular Telegram Mini App
+   (web_app) button — that's a hard, confirmed platform restriction, tested
+   directly against the live API. A plain https:// link to the app would
+   open a generic browser tab instead: no profile, no native chrome. Direct
+   Link Mini Apps (the t.me/<bot>/<shortname> URLs built above) are the one
+   documented exception — Telegram recognizes that specific URL pattern and
+   opens the genuine Mini App from a plain "url" button, profile included.
+   They can't read or send chat messages (a Telegram limit on Direct Links
+   specifically, not something this code restricts) — for an actual private
+   conversation, the "Chat on Telegram" button next to it opens a real chat
+   with the bot instead. Both are genuine Telegram-native paths; neither is
+   a plain external browser link. If the relevant env var isn't set, that
+   specific button is simply omitted rather than posting something broken —
+   the phone number is always in the message text either way.
 
    Selection is deterministic per UTC day (seeded by today's date), so if
    Vercel's cron ever fires twice in the same day — a known possibility,
@@ -47,6 +59,7 @@ import { LISTINGS } from "../src/data/listings.js";
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
 const BOT_USERNAME = process.env.KIRAY_BOT_USERNAME; // e.g. "EthioKirayBot", no "@"
+const MINIAPP_SHORTNAME = process.env.KIRAY_MINIAPP_SHORTNAME; // set via BotFather /newapp — see below
 
 // Deep-links into a private chat with the bot. Telegram opens the chat and
 // sends "/start <payload>" as the first message — the webhook reads that
@@ -54,6 +67,21 @@ const BOT_USERNAME = process.env.KIRAY_BOT_USERNAME; // e.g. "EthioKirayBot", no
 function botLink(payload) {
   if (!BOT_USERNAME) return null;
   return `https://t.me/${BOT_USERNAME}${payload ? `?start=${payload}` : ""}`;
+}
+
+// Telegram "Direct Link Mini Apps": a plain t.me/<bot>/<shortname> URL that
+// Telegram recognizes and opens as the genuine Mini App — WITH real profile
+// access — even though it's just a normal "url" button. This is different
+// from our own web_app buttons (which Telegram bans outright in channels)
+// and is the one way a channel post can open the real app, profile and all.
+// One-time setup: message @BotFather -> /newapp -> pick this bot -> give it
+// a name/description/photo -> when asked for the Web App URL, use the same
+// URL as KIRAY_APP_URL -> choose a short name (e.g. "app") and set it here
+// as KIRAY_MINIAPP_SHORTNAME. Direct Links can't read/send chat messages
+// (a Telegram platform limit) — that's still what the bot chat is for.
+function miniAppLink(payload) {
+  if (!BOT_USERNAME || !MINIAPP_SHORTNAME) return null;
+  return `https://t.me/${BOT_USERNAME}/${MINIAPP_SHORTNAME}${payload ? `?startapp=${payload}` : ""}`;
 }
 
 const birr = (n) => `${n.toLocaleString("en-US")} ETB/month`;
@@ -156,8 +184,12 @@ function formatListing(l) {
 // the real Mini App and Contact & chat features do work. The phone number
 // is already in the message text above for anyone who'd rather just call.
 function listingButtons(l) {
+  const rows = [];
+  const ml = miniAppLink(`listing_${l.id}`);
+  if (ml) rows.push([{ text: "🌍 Open in app · መተግበሪያ ክፈት", url: ml }]);
   const bl = botLink(`listing_${l.id}`);
-  return bl ? { inline_keyboard: [[{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]] } : undefined;
+  if (bl) rows.push([{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]);
+  return rows.length ? { inline_keyboard: rows } : undefined;
 }
 
 /* ---------- entry point ---------- */
@@ -189,12 +221,16 @@ export default async function handler(req, res) {
     await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
+  const footerRows = [];
+  const fullMiniAppLink = miniAppLink();
+  if (fullMiniAppLink) footerRows.push([{ text: "🌍 Open Ethio Kiray app", url: fullMiniAppLink }]);
   const fullBotLink = botLink();
-  if (fullBotLink) {
+  if (fullBotLink) footerRows.push([{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]);
+  if (footerRows.length) {
     await sendMessage(
       CHANNEL_ID,
       "Browse more listings by region, right here in Telegram 👇\nበቴሌግራም ውስጥ ተጨማሪ ማስታወቂያዎችን በክልል ይመልከቱ 👇",
-      { reply_markup: { inline_keyboard: [[{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]] } },
+      { reply_markup: { inline_keyboard: footerRows } },
       "footer"
     );
   }

@@ -1255,9 +1255,17 @@ export default function KirayApp() {
   // Read once, then scrub the URL so switching roles/tabs afterward behaves normally.
   const deepLink = useMemo(() => {
     const p = new URLSearchParams(window.location.search);
-    const listingId = p.get("listing") ? Number(p.get("listing")) : null;
+    let listingId = p.get("listing") ? Number(p.get("listing")) : null;
     const role = ["tenant", "landlord", "broker"].includes(p.get("role")) ? p.get("role") : null;
     const tab = p.get("tab");
+    // Direct Link Mini Apps (t.me/bot/appname?startapp=listing_7 — usable
+    // from channel posts, unlike our own web_app buttons) pass their
+    // payload via Telegram's start_param instead of a URL query string.
+    if (!listingId) {
+      const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      const m = startParam && startParam.match(/^listing_(\d+)$/);
+      if (m) listingId = Number(m[1]);
+    }
     return { listingId, role, tab };
   }, []);
   useEffect(() => {
