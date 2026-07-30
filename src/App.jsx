@@ -1103,25 +1103,30 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
             <button onClick={() => clearFrom(0)} style={{ marginLeft: "auto", fontSize: 12, color: T.danger, background: "none", border: "none", cursor: "pointer" }}>{u.clearLocation}</button>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: region ? 12 : 0 }}>
-          {LOCATIONS.map((r) => (
-            <Chip key={r.region} active={region === r.region} onClick={() => { clearFrom(1); setRegion(r.region === region ? null : r.region); }}>{r.region}</Chip>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginBottom: cityObj ? 12 : 0 }}>
+          <select value={region || ""} onChange={(e) => { const v = e.target.value || null; clearFrom(1); setRegion(v); }} style={inputStyle}>
+            <option value="">{u.region}</option>
+            {LOCATIONS.map((r) => <option key={r.region} value={r.region}>{r.region}</option>)}
+          </select>
+          {regionObj && (
+            <select value={city || ""} onChange={(e) => { const v = e.target.value || null; clearFrom(2); setCity(v); }} style={inputStyle}>
+              <option value="">{u.city}</option>
+              {regionObj.cities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
+            </select>
+          )}
         </div>
-        {regionObj && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: city ? 12 : 0, paddingTop: 10, borderTop: `1px dashed ${T.line}` }}>
-            {regionObj.cities.map((c) => (
-              <Chip key={c.name} small active={city === c.name} onClick={() => { clearFrom(2); setCity(c.name === city ? null : c.name); }}>
-                {c.name} <span style={{ opacity: 0.6 }}>· {c.tier}</span>
-              </Chip>
-            ))}
-          </div>
-        )}
         {cityObj && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 10, borderTop: `1px dashed ${T.line}` }}>
-            {cityObj.hoods.map((h) => (
-              <Chip key={h} small active={hood === h} onClick={() => { setHood(h === hood ? null : h); setSelected(null); }}>{h}</Chip>
-            ))}
+            {/* Owners/brokers can type any neighbourhood name when posting (not
+                limited to a fixed list), so the filter options here are the
+                predefined list PLUS whatever custom names actually show up in
+                current listings for this city — otherwise a freshly-typed
+                neighbourhood would have no way to be found by tenants. */}
+            {[...new Set([...cityObj.hoods, ...listings.filter((l) => l.city === city).map((l) => l.hood).filter(Boolean)])]
+              .sort((a, b) => a.localeCompare(b))
+              .map((h) => (
+                <Chip key={h} small active={hood === h} onClick={() => { setHood(h === hood ? null : h); setSelected(null); }}>{h}</Chip>
+              ))}
           </div>
         )}
       </section>
