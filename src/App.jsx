@@ -42,7 +42,7 @@ const UI = {
     pf_floor: "Floor", pf_block: "Block / building no. (optional)", pf_area: "Area in square metres (m²)",
     pf_features: "Features — select all that apply", pf_description: "Description",
     pf_photos: "Photos (up to 7)", pf_addPhotos: "+ Add photos", pf_photoCount: (n) => `${n}/7 photos added`,
-    pf_photosHint: "Clear photos help listings get more inquiries. Stay in this browser session only — connecting cloud storage is a next step.",
+    pf_photosHint: "Clear photos help listings get more inquiries. JPG or PNG, up to about 10MB each — they're resized automatically.",
     pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Sub-city / Area",
     pf_specificArea: "Neighbourhood",
     pf_specificAreaHint: "The specific area, street, or landmark — shown to tenants exactly as you type it.",
@@ -54,6 +54,9 @@ const UI = {
     pf_submitted_title: "Listing submitted", pf_viewMyListings: "View my listings",
     pf_err_location: "Set the property location: tap “Use my current location” or tap the map to place the pin.",
     pf_err_confirm: "Please confirm that the pin marks the actual location of the property.",
+    pf_err_photosUploading: "Photos are still uploading — give it a few seconds.",
+    pf_err_photosFailed: "A photo failed to upload — remove it (✕) or try adding it again.",
+    sampleBadge: "🧪 Sample listing — for demo purposes",
   },
   am: {
     switchRole: "⇄ ሚና ቀይር", guest: "እንግዳ",
@@ -86,7 +89,7 @@ const UI = {
     pf_floor: "ፎቅ", pf_block: "ብሎክ / ህንፃ ቁጥር (አማራጭ)", pf_area: "ስፋት በካሬ ሜትር (m²)",
     pf_features: "ገፅታዎች — ተገቢውን ሁሉ ይምረጡ", pf_description: "ዝርዝር መግለጫ",
     pf_photos: "ፎቶዎች (እስከ 7)", pf_addPhotos: "+ ፎቶ ጨምር", pf_photoCount: (n) => `${n}/7 ፎቶዎች ታክለዋል`,
-    pf_photosHint: "ግልጽ ፎቶዎች ማስታወቂያዎች ተጨማሪ ጥያቄ እንዲያገኙ ይረዳሉ። ለአሁኑ በዚህ ብራውዘር ክፍለ ጊዜ ብቻ ይቆያሉ — ወደ ደመና ማከማቻ ማገናኘት ቀጣይ እርምጃ ነው።",
+    pf_photosHint: "ግልጽ ፎቶዎች ማስታወቂያዎች ተጨማሪ ጥያቄ እንዲያገኙ ይረዳሉ። JPG ወይም PNG፣ እስከ 10MB ገደማ — በራስ-ሰር መጠናቸው ይስተካከላል።",
     pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ክፍለ ከተማ / አካባቢ",
     pf_specificArea: "ሰፈር",
     pf_specificAreaHint: "የተለየ አካባቢ፣ መንገድ ወይም መለያ ቦታ — ለተከራዮች እርስዎ እንደጻፉት በትክክል ይታያል።",
@@ -98,6 +101,9 @@ const UI = {
     pf_submitted_title: "ማስታወቂያ ገብቷል", pf_viewMyListings: "ማስታወቂያዎቼን ይመልከቱ",
     pf_err_location: "የንብረቱን አካባቢ ያስቀምጡ፦ “የአሁኑን አካባቢዬን ተጠቀም” ን ይንኩ ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ።",
     pf_err_confirm: "እባክዎ ፒኑ የንብረቱን ትክክለኛ አካባቢ እንደሚያመለክት ያረጋግጡ።",
+    pf_err_photosUploading: "ፎቶዎች እየተላኩ ነው — ጥቂት ሰከንዶች ይጠብቁ።",
+    pf_err_photosFailed: "አንድ ፎቶ መላክ አልተሳካም — ያስወግዱት (✕) ወይም እንደገና ይሞክሩ።",
+    sampleBadge: "🧪 የማሳያ ማስታወቂያ",
   },
 };
 
@@ -397,6 +403,36 @@ const btnGhost = { padding: "8px 14px", borderRadius: 8, border: `1px solid ${T.
    Requires VITE_TELEGRAM_BOT_USERNAME to be set at build time (Vercel env
    var, no "@", e.g. VITE_TELEGRAM_BOT_USERNAME=KirrayAppBot) — without it,
    this quietly does nothing rather than opening a broken link. */
+/* ================= IMAGE RESIZE (before upload) =================
+   Shrinks a photo to a reasonable size in the browser before it's sent to
+   /api/upload-photo — keeps uploads comfortably under Vercel's ~4.5MB
+   server-upload limit and much faster on slow connections, which matters
+   for real phone photos (often several MB straight off a camera). */
+function resizeImage(file, maxDim = 1600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Couldn't read the file"));
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Couldn't decode the image"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
+          else { width = Math.round((width * maxDim) / height); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function openTelegramChat(listingId) {
   const username = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
   if (!username) return;
@@ -715,6 +751,11 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
           {fmtETB(l.price)}<span style={{ fontSize: 11, color: T.mute, fontWeight: 400 }}>/mo</span>
         </strong>
       </div>
+      {l.sample && (
+        <div style={{ display: "inline-block", fontSize: 10.5, fontWeight: 700, color: "#8A6410", background: T.goldSoft, border: `1px solid ${T.gold}`, borderRadius: 999, padding: "2px 8px", margin: "4px 0 0" }}>
+          {UI[lang].sampleBadge}
+        </div>
+      )}
       <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
         {l.area || l.hood}, {l.city} · {l.region}
         <span style={{ margin: "0 6px" }}>·</span>
@@ -786,17 +827,40 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
   const [regionSel, setRegionSel] = useState(LOCATIONS[0].region);
   const [citySel, setCitySel] = useState(LOCATIONS[0].cities[0].name);
   const [feat, setFeat] = useState([]);
-  const [photos, setPhotos] = useState([]); // { url, file } — up to 7, kept in-memory (no backend yet)
+  const [photos, setPhotos] = useState([]); // { localUrl, url, uploading, error } — up to 7
   const photoInputRef = useRef(null);
   const addPhotos = (fileList) => {
     const room = 7 - photos.length;
     const chosen = Array.from(fileList).slice(0, room);
-    const next = chosen.map((file) => ({ url: URL.createObjectURL(file), file }));
-    setPhotos((prev) => [...prev, ...next]);
+    const entries = chosen.map((file) => ({
+      localUrl: URL.createObjectURL(file), // instant preview, shown immediately
+      url: null, // filled in with the real, permanent URL once upload finishes
+      uploading: true,
+      error: false,
+      file,
+    }));
+    setPhotos((prev) => [...prev, ...entries]);
+
+    entries.forEach(async (entry) => {
+      try {
+        const dataUrl = await resizeImage(entry.file);
+        const res = await fetch("/api/upload-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataUrl, filename: entry.file.name }),
+        });
+        const data = await res.json();
+        setPhotos((prev) => prev.map((p) => p.localUrl === entry.localUrl
+          ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok }
+          : p));
+      } catch {
+        setPhotos((prev) => prev.map((p) => p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true } : p));
+      }
+    });
   };
   const removePhoto = (idx) => {
     setPhotos((prev) => {
-      URL.revokeObjectURL(prev[idx].url);
+      URL.revokeObjectURL(prev[idx].localUrl);
       return prev.filter((_, i) => i !== idx);
     });
   };
@@ -854,13 +918,15 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
     return m ? Number(m[1]) : null; // "Not applicable…" → null, matches shop/office listings
   })();
 
-  const submitListing = () => {
+  const submitListing = async () => {
     if (!titleField.trim()) return setFormErr(u.pf_titleField + " is required.");
     if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
     if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
     if (!specificArea.trim()) return setFormErr(u.pf_specificArea + " is required.");
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
+    if (photos.some((p) => p.uploading)) return setFormErr(u.pf_err_photosUploading);
+    if (photos.some((p) => p.error)) return setFormErr(u.pf_err_photosFailed);
     setFormErr("");
 
     const extraNotes = [
@@ -868,7 +934,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       block.trim() ? `Block ${block.trim()}` : null,
     ].filter(Boolean).join(" · ");
 
-    onCreateListing?.({
+    const newListingData = {
       title: titleField.trim(),
       type: ptype,
       kind,
@@ -884,15 +950,17 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       features: feat,
       description: [description.trim(), extraNotes].filter(Boolean).join(" — ") || undefined,
       lister: isBroker ? "Broker" : "Owner",
-      name: DEMO[role], // shared demo account — see the note on ManagerApp's "My properties" below
+      name: account?.name || DEMO[role], // shown to tenants
+      ownerId: account?.telegramId ?? null, // ties this listing to the real signed-in person, if any
       phone: contactPhone.trim() || account?.contact || "+251900000000",
       owner: isBroker ? (ownerName.trim() || null) : null,
       verified: false, // new listings start unverified, same as a real submission would
       views: 0,
       posted: new Date().toISOString(),
-      photos: photos.map((p) => p.url),
-    });
+      photos: photos.map((p) => p.url).filter(Boolean),
+    };
 
+    await onCreateListing?.(newListingData);
     setPosted(true);
   };
   if (posted) {
@@ -976,11 +1044,17 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
           onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {photos.map((p, idx) => (
-            <div key={p.url} style={{ position: "relative", width: 84, height: 84, borderRadius: 8, overflow: "hidden", border: `1px solid ${T.line}` }}>
-              <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div key={p.localUrl} style={{ position: "relative", width: 84, height: 84, borderRadius: 8, overflow: "hidden", border: `1px solid ${p.error ? T.danger : T.line}` }}>
+              <img src={p.localUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: p.uploading ? 0.5 : 1 }} />
+              {p.uploading && (
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", background: "rgba(0,0,0,.25)" }}>Uploading…</div>
+              )}
+              {p.error && (
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 700, color: "#fff", background: "rgba(196,58,58,.75)", textAlign: "center", padding: 4 }}>Failed — remove & retry</div>
+              )}
               <button type="button" onClick={() => removePhoto(idx)} title="Remove"
                 style={{ position: "absolute", top: 3, right: 3, width: 20, height: 20, borderRadius: "50%", border: "none", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 12, cursor: "pointer", lineHeight: "20px", padding: 0 }}>✕</button>
-              {idx === 0 && <span style={{ position: "absolute", bottom: 3, left: 3, fontSize: 9.5, fontWeight: 700, background: "rgba(255,255,255,.9)", color: T.forest, padding: "1px 5px", borderRadius: 999 }}>COVER</span>}
+              {idx === 0 && !p.uploading && !p.error && <span style={{ position: "absolute", bottom: 3, left: 3, fontSize: 9.5, fontWeight: 700, background: "rgba(255,255,255,.9)", color: T.forest, padding: "1px 5px", borderRadius: 999 }}>COVER</span>}
             </div>
           ))}
           {photos.length < 7 && (
@@ -1191,12 +1265,19 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
 function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, listings, onCreateListing }) {
   const u = UI[lang];
-  const me = DEMO[role];
+  // Real Telegram sign-in -> isolate strictly by that person's own id.
+  // No Telegram sign-in (guest testing in a plain browser) -> fall back to
+  // the old shared demo-name behaviour, since a guest has no persistent
+  // identity to isolate by anyway.
+  const ownerId = account?.telegramId ?? null;
+  const me = account?.name || DEMO[role];
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
   const [openThreadId, setOpenThreadId] = useState(null);
 
-  const mine = listings.filter((l) => l.name === me).sort((a, b) => new Date(b.posted) - new Date(a.posted));
+  const mine = listings
+    .filter((l) => (ownerId ? l.ownerId === ownerId : l.name === DEMO[role]))
+    .sort((a, b) => new Date(b.posted) - new Date(a.posted));
   const myIds = mine.map((l) => l.id);
   const myThreads = chats
     .filter((t) => myIds.includes(t.listingId) && t.messages.length > 0)
@@ -1378,11 +1459,34 @@ export default function KirayApp() {
   /* Chat state lives at the root so it survives role switches within a session.
      In production this is a database + real-time updates (e.g. Supabase/Firebase). */
   const [chats, setChats] = useState(SEED_CHATS);
-  // Seeded from the sample data, but a real, mutable array from here on —
-  // posting a listing now actually adds to this, visible to every role in
-  // this session (still session-only: no backend, so it resets on reload).
+  // Starts with the bundled sample data so the page never looks empty,
+  // then swaps in the real persisted list from /api/listings once it
+  // loads. If that storage isn't set up yet, the fetch just fails quietly
+  // and this keeps working exactly as the session-only version did.
   const [listings, setListings] = useState(LISTINGS);
-  const addListing = (partial) => {
+  useEffect(() => {
+    fetch("/api/listings")
+      .then((r) => r.json())
+      .then((data) => { if (data.ok && Array.isArray(data.listings)) setListings(data.listings); })
+      .catch(() => {});
+  }, []);
+  const addListing = async (partial) => {
+    try {
+      const res = await fetch("/api/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(partial),
+      });
+      const data = await res.json();
+      if (data.ok && data.listing) {
+        setListings((prev) => [...prev, data.listing]);
+        return;
+      }
+    } catch {
+      // fall through to the local-only fallback below
+    }
+    // Storage isn't reachable (not set up yet, or a network hiccup) —
+    // still add it locally so posting keeps working for this session.
     setListings((prev) => [...prev, { id: Math.max(0, ...prev.map((l) => l.id)) + 1, ...partial }]);
   };
 

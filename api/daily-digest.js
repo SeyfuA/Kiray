@@ -173,6 +173,7 @@ function formatListing(l) {
   // directly against the live API), so the number goes in the message text
   // instead — Telegram auto-detects and makes phone numbers tappable there.
   lines.push(`📞 Call · ደውል: ${l.phone}`);
+  if (l.sample) lines.push("🧪 Sample listing · የማሳያ ማስታወቂያ");
   return lines.join("\n");
 }
 

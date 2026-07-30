@@ -239,6 +239,7 @@ function formatListing(l, lang) {
   ];
   if (l.beds) lines.push(`🛏 ${s.beds(l.beds)} · ${l.size} m²`);
   else lines.push(`📐 ${l.size} m² · ${l.kind}`);
+  if (l.sample) lines.push("🧪 " + (lang === "am" ? "የማሳያ ማስታወቂያ" : "Sample listing — for demo purposes"));
   return lines.join("\n");
 }
 
