@@ -600,29 +600,48 @@ function RoleGate({ onPick, lang, setLang }) {
    a guest — no credentials requested. */
 function useTelegramProfile(setAccount) {
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (!tg || !tg.initData) return; // normal browser visit → guest
-    tg.ready();
-    tg.expand();
-    fetch("/api/telegram-webapp-auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.ok || !data.user) return; // verification failed → stay guest
-        const u = data.user;
-        const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ");
-        setAccount({
-          name: fullName || (u.username ? "@" + u.username : "Telegram user"),
-          method: "telegram",
-          contact: u.username ? "@" + u.username : "Telegram",
-          telegramId: u.id,
-          photo: u.photo_url || null,
-        });
+    let cancelled = false;
+    let attempts = 0;
+
+    // Telegram's WebView bridge doesn't always have initData ready at the
+    // exact instant the page mounts — especially noticeable on some launch
+    // paths (e.g. Direct Link Mini Apps) versus others. A single synchronous
+    // check here would wrongly and permanently fall back to "guest" if it
+    // ran a beat too early, so this retries briefly instead of giving up
+    // immediately.
+    const tryFetch = () => {
+      if (cancelled) return;
+      const tg = window.Telegram?.WebApp;
+      if (!tg || !tg.initData) {
+        attempts++;
+        if (attempts < 20) setTimeout(tryFetch, 100); // retry for up to ~2s, then treat as a normal browser visit
+        return;
+      }
+      tg.ready();
+      tg.expand();
+      fetch("/api/telegram-webapp-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData: tg.initData }),
       })
-      .catch(() => {}); // network hiccup → stay guest
+        .then((r) => r.json())
+        .then((data) => {
+          if (cancelled || !data.ok || !data.user) return; // verification failed → stay guest
+          const u = data.user;
+          const fullName = [u.first_name, u.last_name].filter(Boolean).join(" ");
+          setAccount({
+            name: fullName || (u.username ? "@" + u.username : "Telegram user"),
+            method: "telegram",
+            contact: u.username ? "@" + u.username : "Telegram",
+            telegramId: u.id,
+            photo: u.photo_url || null,
+          });
+        })
+        .catch(() => {}); // network hiccup → stay guest
+    };
+
+    tryFetch();
+    return () => { cancelled = true; };
   }, [setAccount]);
 }
 
