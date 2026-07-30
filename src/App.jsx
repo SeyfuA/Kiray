@@ -568,9 +568,11 @@ function ChatModal({ thread, listing, me, onSend, onClose, lang = "en" }) {
           })}
         </div>
 
-        {/* Prototype hint */}
+        {/* This particular chat view (landlord/broker replies) is still
+            session-only — unlike the rest of the app, it isn't backed by
+            real delivery yet, so this note stays honest about that. */}
         <div style={{ padding: "6px 14px", fontSize: 11, color: T.mute, background: T.paper, borderTop: `1px dashed ${T.line}` }}>
-          💡 Prototype: messages are shared across roles in this session — send one, then "⇄ Switch role" to reply from the other side.
+          💡 Demo note: these messages are only shared within this browser session — send one, then "⇄ Switch role" to reply from the other side.
         </div>
 
         {/* Input */}
@@ -603,8 +605,8 @@ function RoleGate({ onPick, lang, setLang }) {
       desc_am: "ለብዙ ባለቤቶች ንብረቶችን ያስተዳድሩ፣ ጥያቄዎችን እና ኮሚሽኖችን ይከታተሉ፣ የተረጋገጠ ስም ይገንቡ።" },
   ];
   const t = lang === "am"
-    ? { tagline: "በኢትዮጵያ ውስጥ ኪራይ — በሁሉም ከተማ፣ በሁሉም ሰፈር", who: "ማን ነዎት?", cont: "ቀጥል →", footer: "ማንኛውም ጊዜ ከላይ ካለው ባር ሚናዎን መቀየር ይችላሉ። ናሙና — ለሙከራ ብቻ።", toggle: "🌐 English" }
-    : { tagline: "Rentals across Ethiopia — every capital, every neighbourhood", who: "Who are you?", cont: "Continue →", footer: "You can switch roles anytime from the top bar. Prototype — sample data only.", toggle: "🌐 አማርኛ" };
+    ? { tagline: "በኢትዮጵያ ውስጥ ኪራይ — በሁሉም ከተማ፣ በሁሉም ሰፈር", who: "ማን ነዎት?", cont: "ቀጥል →", footer: "ማንኛውም ጊዜ ከላይ ካለው ባር ሚናዎን መቀየር ይችላሉ።", toggle: "🌐 English" }
+    : { tagline: "Rentals across Ethiopia — every capital, every neighbourhood", who: "Who are you?", cont: "Continue →", footer: "You can switch roles anytime from the top bar.", toggle: "🌐 አማርኛ" };
   return (
     <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", fontFamily: bodyFont, position: "relative" }}>
       <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ position: "absolute", top: 18, right: 18, padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
@@ -1760,7 +1762,7 @@ export default function KirayApp() {
         ? <TenantApp tab={tab} initialChatListingId={deepLink.listingId} lang={lang} listings={listings} />
         : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} listings={listings} onCreateListing={addListing} onUpdateListing={updateListing} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
-        Ethio Kiray · ኢትዮ ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
+        Ethio Kiray · ኢትዮ ኪራይ — Rentals across Ethiopia. Map © OpenStreetMap contributors.
       </footer>
     </div>
   );
