@@ -437,9 +437,13 @@ function openTelegramChat(listingId) {
   const username = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
   if (!username) return;
   const url = `https://t.me/${username}?start=listing_${listingId}`;
-  const tg = window.Telegram?.WebApp;
-  if (tg?.openTelegramLink) tg.openTelegramLink(url); // already inside the Mini App
-  else window.open(url, "_blank", "noopener,noreferrer"); // plain browser visit
+  // Telegram's own tg.openTelegramLink() JS method turned out to be
+  // unreliable on some platforms (confirmed: worked on desktop browsers,
+  // silently did nothing from inside the mobile app). A plain navigation
+  // doesn't have that problem — Telegram's WebView already intercepts and
+  // handles t.me links natively, on every platform, without needing the
+  // special API call at all.
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 // Opens a direct chat with the actual person who posted the listing —
@@ -448,9 +452,7 @@ function openTelegramChat(listingId) {
 // openTelegramChat() above (the bot) when there's no real username to link to.
 function openPersonTelegram(username) {
   const url = `https://t.me/${username}`;
-  const tg = window.Telegram?.WebApp;
-  if (tg?.openTelegramLink) tg.openTelegramLink(url);
-  else window.open(url, "_blank", "noopener,noreferrer");
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 function CallButton({ phone, label }) {
