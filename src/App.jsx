@@ -877,10 +877,10 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
         });
         const data = await res.json();
         setPhotos((prev) => prev.map((p) => p.localUrl === entry.localUrl
-          ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok }
+          ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok, errorMsg: data.ok ? null : data.error }
           : p));
-      } catch {
-        setPhotos((prev) => prev.map((p) => p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true } : p));
+      } catch (e) {
+        setPhotos((prev) => prev.map((p) => p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true, errorMsg: e.message } : p));
       }
     });
   };
@@ -953,7 +953,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
     if (photos.some((p) => p.uploading)) return setFormErr(u.pf_err_photosUploading);
-    if (photos.some((p) => p.error)) return setFormErr(u.pf_err_photosFailed);
+    if (photos.some((p) => p.error)) return setFormErr(u.pf_err_photosFailed + (photos.find((p) => p.error)?.errorMsg ? ` (${photos.find((p) => p.error).errorMsg})` : ""));
     setFormErr("");
 
     const extraNotes = [
@@ -1081,7 +1081,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", background: "rgba(0,0,0,.25)" }}>Uploading…</div>
               )}
               {p.error && (
-                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 700, color: "#fff", background: "rgba(196,58,58,.75)", textAlign: "center", padding: 4 }}>Failed — remove & retry</div>
+                <div title={p.errorMsg || ""} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 700, color: "#fff", background: "rgba(196,58,58,.75)", textAlign: "center", padding: 4 }}>Failed — remove & retry</div>
               )}
               <button type="button" onClick={() => removePhoto(idx)} title="Remove"
                 style={{ position: "absolute", top: 3, right: 3, width: 20, height: 20, borderRadius: "50%", border: "none", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 12, cursor: "pointer", lineHeight: "20px", padding: 0 }}>✕</button>
@@ -1095,6 +1095,12 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
             }}>{u.pf_addPhotos}</button>
           )}
         </div>
+        {photos.some((p) => p.error) && (
+          <div style={{ fontSize: 12, color: T.danger, marginTop: 6 }}>
+            {lang === "am" ? "ፎቶ መላክ አልተሳካም" : "Photo upload failed"}
+            {photos.find((p) => p.error)?.errorMsg ? `: ${photos.find((p) => p.error).errorMsg}` : "."}
+          </div>
+        )}
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 6, lineHeight: 1.4 }}>{u.pf_photosHint}</div>
       </Field>
       <Field label={u.pf_region}>
@@ -1325,9 +1331,9 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
           body: JSON.stringify({ dataUrl, filename: entry.file.name }),
         });
         const data = await res.json();
-        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok } : p)));
-      } catch {
-        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true } : p)));
+        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok, errorMsg: data.ok ? null : data.error } : p)));
+      } catch (e) {
+        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true, errorMsg: e.message } : p)));
       }
     });
   };
@@ -1345,7 +1351,10 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
     if (!contactPhone.trim()) return setErr(lang === "am" ? "ስልክ ቁጥር ያስፈልጋል።" : "Phone number is required.");
     if (contactPhone.trim().startsWith("@")) return setErr(lang === "am" ? "ይህ የቴሌግራም የተጠቃሚ ስም ይመስላል፣ ስልክ ቁጥር አይደለም። ትክክለኛ ስልክ ቁጥር ያስገቡ።" : "That looks like a Telegram username, not a phone number — enter a real phone number.");
     if (photos.some((p) => p.uploading)) return setErr(lang === "am" ? "ፎቶዎች እየተላኩ ነው — ጥቂት ሰከንዶች ይጠብቁ።" : "Photos are still uploading — give it a few seconds.");
-    if (photos.some((p) => p.error)) return setErr(lang === "am" ? "አንድ ፎቶ አልተሳካም — ያስወግዱት ወይም እንደገና ይሞክሩ።" : "A photo failed to upload — remove it or try again.");
+    if (photos.some((p) => p.error)) {
+      const reason = photos.find((p) => p.error)?.errorMsg;
+      return setErr((lang === "am" ? "አንድ ፎቶ አልተሳካም — ያስወግዱት ወይም እንደገና ይሞክሩ።" : "A photo failed to upload — remove it or try again.") + (reason ? ` (${reason})` : ""));
+    }
     setErr("");
     setSaving(true);
     const ok = await onSave({
@@ -1394,6 +1403,7 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
               <div key={p.localUrl} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: `1px solid ${p.error ? T.danger : T.line}` }}>
                 <img src={p.localUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: p.uploading ? 0.5 : 1 }} />
                 {p.uploading && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", background: "rgba(0,0,0,.25)" }}>…</div>}
+                {p.error && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8.5, fontWeight: 700, color: "#fff", background: "rgba(196,58,58,.75)", textAlign: "center", padding: 3 }}>{lang === "am" ? "አልተሳካም" : "Failed"}</div>}
                 <button type="button" onClick={() => removePhoto(idx)} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 11, cursor: "pointer", lineHeight: "18px", padding: 0 }}>✕</button>
               </div>
             ))}
@@ -1403,6 +1413,12 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
               </button>
             )}
           </div>
+          {photos.some((p) => p.error) && (
+            <div style={{ fontSize: 12, color: T.danger, marginTop: 6 }}>
+              {lang === "am" ? "ፎቶ መላክ አልተሳካም" : "Photo upload failed"}
+              {photos.find((p) => p.error)?.errorMsg ? `: ${photos.find((p) => p.error).errorMsg}` : "."}
+            </div>
+          )}
         </Field>
         {err && <div style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{err}</div>}
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
