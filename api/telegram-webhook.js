@@ -184,7 +184,7 @@ function searchListings(query) {
   const q = query.trim().toLowerCase();
   if (!q) return LISTINGS;
   return LISTINGS.filter((l) =>
-    [l.city, l.region, l.hood, l.kind, l.type, l.title]
+    [l.city, l.region, l.hood, l.area, l.kind, l.type, l.title]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(q))
   );
@@ -234,7 +234,7 @@ function formatListing(l, lang) {
   const s = STR[lang];
   const lines = [
     `🏠 <b>${l.title}</b>${l.verified ? " ✅" : ""}`,
-    `📍 ${l.hood}, ${l.city}`,
+    `📍 ${l.area || l.hood}, ${l.city}`,
     `💰 ${s.etb_month(l.price)}`,
   ];
   if (l.beds) lines.push(`🛏 ${s.beds(l.beds)} · ${l.size} m²`);
@@ -287,7 +287,7 @@ async function sendVenuePin(chatId, l) {
       latitude: l.lat,
       longitude: l.lng,
       title: l.title,
-      address: `${l.hood}, ${l.city}`,
+      address: `${l.area || l.hood}, ${l.city}`,
     }),
   });
 }

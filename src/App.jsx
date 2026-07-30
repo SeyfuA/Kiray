@@ -16,7 +16,7 @@ const UI = {
     nav_browse: "Find a rental", nav_saved: "Saved ❤", nav_listings_landlord: "My properties",
     nav_listings_broker: "My portfolio", nav_inquiries: "Inquiries", nav_post: "+ New listing",
     lang_toggle: "🌐 አማርኛ",
-    region: "Region", city: "City / town", neighbourhood: "Neighbourhood", propertyType: "Property type",
+    region: "Region", city: "City / town", neighbourhood: "Sub-city / Area", propertyType: "Property type",
     maxPrice: "Max price", searchPlaceholder: "Search listings…", allTypes: "All",
     resultsCount: (n) => `${n} listing${n !== 1 ? "s" : ""} · newest first`,
     noResults: "No listings match these filters yet. Widen the price range or clear the neighbourhood filter.",
@@ -43,7 +43,9 @@ const UI = {
     pf_features: "Features — select all that apply", pf_description: "Description",
     pf_photos: "Photos (up to 7)", pf_addPhotos: "+ Add photos", pf_photoCount: (n) => `${n}/7 photos added`,
     pf_photosHint: "Clear photos help listings get more inquiries. Stay in this browser session only — connecting cloud storage is a next step.",
-    pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Neighbourhood",
+    pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Sub-city / Area",
+    pf_specificArea: "Neighbourhood",
+    pf_specificAreaHint: "The specific area, street, or landmark — shown to tenants exactly as you type it.",
     pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing (optional)",
     pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
     pf_orTapMap: "or tap the map to place the pin, then drag it to adjust",
@@ -58,7 +60,7 @@ const UI = {
     nav_browse: "ኪራይ ፈልግ", nav_saved: "የተቀመጡ ❤", nav_listings_landlord: "የኔ ንብረቶች",
     nav_listings_broker: "የኔ ፖርትፎሊዮ", nav_inquiries: "ጥያቄዎች", nav_post: "+ አዲስ ማስታወቂያ",
     lang_toggle: "🌐 English",
-    region: "ክልል", city: "ከተማ / ወረዳ", neighbourhood: "ሰፈር", propertyType: "የንብረት አይነት",
+    region: "ክልል", city: "ከተማ / ወረዳ", neighbourhood: "ክፍለ ከተማ / አካባቢ", propertyType: "የንብረት አይነት",
     maxPrice: "ከፍተኛ ዋጋ", searchPlaceholder: "ማስታወቂያ ይፈልጉ…", allTypes: "ሁሉም",
     resultsCount: (n) => `${n} ማስታወቂያ${n !== 1 ? "ዎች" : ""} · አዲሶቹ መጀመሪያ`,
     noResults: "በእነዚህ ማጣሪያዎች ምንም ማስታወቂያ አልተገኘም። የዋጋ ክልሉን ያስፉ ወይም የሰፈር ማጣሪያውን ያጽዱ።",
@@ -85,7 +87,9 @@ const UI = {
     pf_features: "ገፅታዎች — ተገቢውን ሁሉ ይምረጡ", pf_description: "ዝርዝር መግለጫ",
     pf_photos: "ፎቶዎች (እስከ 7)", pf_addPhotos: "+ ፎቶ ጨምር", pf_photoCount: (n) => `${n}/7 ፎቶዎች ታክለዋል`,
     pf_photosHint: "ግልጽ ፎቶዎች ማስታወቂያዎች ተጨማሪ ጥያቄ እንዲያገኙ ይረዳሉ። ለአሁኑ በዚህ ብራውዘር ክፍለ ጊዜ ብቻ ይቆያሉ — ወደ ደመና ማከማቻ ማገናኘት ቀጣይ እርምጃ ነው።",
-    pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ሰፈር",
+    pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ክፍለ ከተማ / አካባቢ",
+    pf_specificArea: "ሰፈር",
+    pf_specificAreaHint: "የተለየ አካባቢ፣ መንገድ ወይም መለያ ቦታ — ለተከራዮች እርስዎ እንደጻፉት በትክክል ይታያል።",
     pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ (አማራጭ)",
     pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
     pf_orTapMap: "ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ፣ ከዚያም ለማስተካከል ይጎትቱት",
@@ -123,7 +127,7 @@ const LOCATIONS = [
     cities: [
       {
         name: "Addis Ababa", tier: "Federal capital", lat: 9.02, lng: 38.75,
-        hoods: ["Bole Medhanealem", "Kazanchis", "Piassa", "Merkato", "CMC", "Ayat", "Gerji", "Sarbet", "Mexico", "Megenagna", "Summit", "Old Airport", "Jemo", "Lebu"],
+        hoods: ["Addis Ketema", "Akaky Kaliti", "Arada", "Bole", "Gulele", "Kirkos", "Kolfe Keranio", "Lemi Kura", "Lideta", "Nifas Silk-Lafto", "Yeka"],
       },
     ],
   },
@@ -315,7 +319,7 @@ function MapPanel({ results, selected, setSelected, subtitle }) {
             <Popup>
               <div style={{ fontFamily: bodyFont, minWidth: 170 }}>
                 <strong style={{ fontSize: 13 }}>{l.title}</strong>
-                <div style={{ fontSize: 12, color: T.mute, margin: "2px 0" }}>{l.hood}, {l.city}</div>
+                <div style={{ fontSize: 12, color: T.mute, margin: "2px 0" }}>{l.area || l.hood}, {l.city}</div>
                 <div style={{ fontSize: 13, color: T.forest, fontWeight: 700 }}>{fmtETB(l.price)}/mo</div>
                 <div style={{ fontSize: 11, color: T.mute }}>Posted {timeAgo(l.posted)}</div>
               </div>
@@ -712,7 +716,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
         </strong>
       </div>
       <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
-        {l.hood}, {l.city} · {l.region}
+        {l.area || l.hood}, {l.city} · {l.region}
         <span style={{ margin: "0 6px" }}>·</span>
         <span title={fullDate(l.posted)}>🕐 Posted {timeAgo(l.posted)}</span>
       </div>
@@ -808,7 +812,8 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
   const [block, setBlock] = useState("");
   const [area, setArea] = useState("");
   const [description, setDescription] = useState("");
-  const [hood, setHood] = useState("");
+  const [subcitySel, setSubcitySel] = useState(LOCATIONS[0].cities[0].hoods[0] || ""); // structured — matches the tenant filter
+  const [specificArea, setSpecificArea] = useState(""); // free text — the actual neighbourhood/landmark, typed by the lister
   const [rent, setRent] = useState("");
   const [titleField, setTitleField] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -822,7 +827,9 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
   const pickType = (t) => { setPtype(t); setKind(PROPERTY_KINDS[t][0]); };
   const pickRegion = (r) => {
     setRegionSel(r);
-    setCitySel(LOCATIONS.find((x) => x.region === r).cities[0].name);
+    const firstCity = LOCATIONS.find((x) => x.region === r).cities[0];
+    setCitySel(firstCity.name);
+    setSubcitySel(firstCity.hoods[0] || "");
   };
 
   const useMyLocation = () => {
@@ -851,7 +858,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
     if (!titleField.trim()) return setFormErr(u.pf_titleField + " is required.");
     if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
     if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
-    if (!hood.trim()) return setFormErr(u.pf_neighbourhood + " is required.");
+    if (!specificArea.trim()) return setFormErr(u.pf_specificArea + " is required.");
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
     setFormErr("");
@@ -867,7 +874,8 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       kind,
       city: citySel,
       region: regionSel,
-      hood: hood.trim(),
+      hood: subcitySel,
+      area: specificArea.trim(),
       lat: coords.lat,
       lng: coords.lng,
       price: Number(rent),
@@ -990,15 +998,25 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
         </select>
       </Field>
       <Field label={u.pf_city}>
-        <select style={inputStyle} value={citySel} onChange={(e) => setCitySel(e.target.value)}>
+        <select style={inputStyle} value={citySel} onChange={(e) => {
+          setCitySel(e.target.value);
+          const c = regionCities.find((x) => x.name === e.target.value);
+          setSubcitySel(c?.hoods[0] || "");
+        }}>
           {regionCities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
         </select>
       </Field>
       <Field label={u.pf_neighbourhood}>
-        <input style={inputStyle} value={hood} onChange={(e) => setHood(e.target.value)} placeholder={`e.g. ${cityObj.hoods[0]}`} list="hood-suggestions" />
+        <select style={inputStyle} value={subcitySel} onChange={(e) => setSubcitySel(e.target.value)}>
+          {cityObj.hoods.map((h) => <option key={h} value={h}>{h}</option>)}
+        </select>
+      </Field>
+      <Field label={u.pf_specificArea}>
+        <input style={inputStyle} value={specificArea} onChange={(e) => setSpecificArea(e.target.value)} placeholder={`e.g. ${cityObj.hoods[0]} Medhanealem, near the main road`} list="hood-suggestions" />
         <datalist id="hood-suggestions">
           {cityObj.hoods.map((h) => <option key={h} value={h} />)}
         </datalist>
+        <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>{u.pf_specificAreaHint}</div>
       </Field>
       <Field label={u.pf_rent}><input style={inputStyle} type="number" value={rent} onChange={(e) => setRent(e.target.value)} placeholder="e.g. 25000" /></Field>
       <Field label={u.pf_titleField}><input style={inputStyle} value={titleField} onChange={(e) => setTitleField(e.target.value)} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
@@ -1222,7 +1240,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
                   {awaiting && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: T.goldSoft, color: "#8A6410" }}>awaiting reply</span>}
                   <span style={{ marginLeft: "auto", fontSize: 12, color: T.mute }}>{timeAgo(last.at)}</span>
                 </div>
-                <div style={{ fontSize: 12, color: T.mute, margin: "3px 0 8px" }}>Re: {l.title} — {l.hood}, {l.city}</div>
+                <div style={{ fontSize: 12, color: T.mute, margin: "3px 0 8px" }}>Re: {l.title} — {l.area || l.hood}, {l.city}</div>
                 <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.5 }}>
                   {last.from === "lister" && <em style={{ color: T.mute }}>You: </em>}{last.text}
                 </p>
@@ -1277,7 +1295,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
                     <strong style={{ color: T.forest, whiteSpace: "nowrap", fontSize: 14.5 }}>{fmtETB(l.price)}/mo</strong>
                   </div>
                   <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
-                    {l.hood}, {l.city}
+                    {l.area || l.hood}, {l.city}
                     <span style={{ margin: "0 6px" }}>·</span>
                     <span title={fullDate(l.posted)}>🕐 Posted {timeAgo(l.posted)}</span>
                     {isBroker && l.owner && <> · Owner: <strong style={{ color: T.ink }}>{l.owner}</strong> 🔒</>}

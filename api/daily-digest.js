@@ -142,7 +142,7 @@ async function sendVenuePin(chatId, l) {
   if (typeof l.lat !== "number" || typeof l.lng !== "number") return;
   await call(
     "sendVenue",
-    { chat_id: chatId, latitude: l.lat, longitude: l.lng, title: l.title, address: `${l.hood}, ${l.city}` },
+    { chat_id: chatId, latitude: l.lat, longitude: l.lng, title: l.title, address: `${l.area || l.hood}, ${l.city}` },
     `listing ${l.id} venue pin`
   );
 }
@@ -164,7 +164,7 @@ async function sendPhotoAlbum(chatId, l) {
 function formatListing(l) {
   const lines = [
     `🏠 <b>${l.title}</b>${l.verified ? " ✅" : ""}`,
-    `📍 ${l.hood}, ${l.city}`,
+    `📍 ${l.area || l.hood}, ${l.city}`,
     `💰 ${birr(l.price)}`,
   ];
   if (l.beds) lines.push(`🛏 ${l.beds} bed${l.beds > 1 ? "s" : ""} · ${l.size} m²`);
