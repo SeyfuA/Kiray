@@ -755,7 +755,7 @@ function FlyTo({ pos, trigger }) {
   return null;
 }
 
-function PostForm({ role, onDone, account, lang = "en" }) {
+function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
   const u = UI[lang];
   const [posted, setPosted] = useState(false);
   const [ptype, setPtype] = useState("Residential");
@@ -782,6 +782,20 @@ function PostForm({ role, onDone, account, lang = "en" }) {
   const [geoMsg, setGeoMsg] = useState("");
   const [geoTrigger, setGeoTrigger] = useState(0);
   const [formErr, setFormErr] = useState("");
+  // These used to be plain uncontrolled inputs — nothing typed into them was
+  // ever readable, so submitting could never actually build a real listing.
+  const [roomsSel, setRoomsSel] = useState("2 rooms");
+  const [floorSel, setFloorSel] = useState("Ground floor");
+  const [block, setBlock] = useState("");
+  const [area, setArea] = useState("");
+  const [description, setDescription] = useState("");
+  const [hood, setHood] = useState("");
+  const [rent, setRent] = useState("");
+  const [titleField, setTitleField] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
+  const [commission, setCommission] = useState("1 month's rent (standard)");
   const isBroker = role === "broker";
   const toggleFeat = (f) => setFeat((s) => s.includes(f) ? s.filter((x) => x !== f) : [...s, f]);
   const regionCities = (LOCATIONS.find((r) => r.region === regionSel) || LOCATIONS[0]).cities;
@@ -809,10 +823,49 @@ function PostForm({ role, onDone, account, lang = "en" }) {
     );
   };
 
+  const beds = (() => {
+    const m = roomsSel.match(/^(\d+)/);
+    return m ? Number(m[1]) : null; // "Not applicable…" → null, matches shop/office listings
+  })();
+
   const submitListing = () => {
+    if (!titleField.trim()) return setFormErr(u.pf_titleField + " is required.");
+    if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
+    if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
+    if (!hood.trim()) return setFormErr(u.pf_neighbourhood + " is required.");
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
     setFormErr("");
+
+    const extraNotes = [
+      floorSel && floorSel !== "Not applicable" ? floorSel : null,
+      block.trim() ? `Block ${block.trim()}` : null,
+    ].filter(Boolean).join(" · ");
+
+    onCreateListing?.({
+      title: titleField.trim(),
+      type: ptype,
+      kind,
+      city: citySel,
+      region: regionSel,
+      hood: hood.trim(),
+      lat: coords.lat,
+      lng: coords.lng,
+      price: Number(rent),
+      beds,
+      size: Number(area),
+      features: feat,
+      description: [description.trim(), extraNotes].filter(Boolean).join(" — ") || undefined,
+      lister: isBroker ? "Broker" : "Owner",
+      name: DEMO[role], // shared demo account — see the note on ManagerApp's "My properties" below
+      phone: contactPhone.trim() || account?.contact || "+251900000000",
+      owner: isBroker ? (ownerName.trim() || null) : null,
+      verified: false, // new listings start unverified, same as a real submission would
+      views: 0,
+      posted: new Date().toISOString(),
+      photos: photos.map((p) => p.url),
+    });
+
     setPosted(true);
   };
   if (posted) {
@@ -844,9 +897,9 @@ function PostForm({ role, onDone, account, lang = "en" }) {
       {isBroker && (
         <div style={{ background: T.goldSoft, border: `1px solid ${T.gold}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#8A6410", marginBottom: 8 }}>{u.pf_ownerDetails}</div>
-          <Field label="Owner full name"><input style={inputStyle} placeholder="e.g. Ato Dawit Bekele" /></Field>
-          <Field label="Owner phone"><input style={inputStyle} placeholder="+251 9…" /></Field>
-          <Field label="Your commission"><select style={inputStyle}><option>1 month's rent (standard)</option><option>Half month's rent</option><option>Custom agreement</option></select></Field>
+          <Field label="Owner full name"><input style={inputStyle} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. Ato Dawit Bekele" /></Field>
+          <Field label="Owner phone"><input style={inputStyle} value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="+251 9…" /></Field>
+          <Field label="Your commission"><select style={inputStyle} value={commission} onChange={(e) => setCommission(e.target.value)}><option>1 month's rent (standard)</option><option>Half month's rent</option><option>Custom agreement</option></select></Field>
         </div>
       )}
       <Field label={u.pf_propertyType}>
@@ -861,24 +914,24 @@ function PostForm({ role, onDone, account, lang = "en" }) {
         </select>
       </Field>
       <Field label={u.pf_rooms}>
-        <select style={inputStyle}>
+        <select style={inputStyle} value={roomsSel} onChange={(e) => setRoomsSel(e.target.value)}>
           <option>1 room</option><option>2 rooms</option><option>3 rooms</option><option>4 rooms</option><option>5+ rooms</option>
           <option>Not applicable (shop / office / warehouse)</option>
         </select>
       </Field>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label={u.pf_floor}>
-          <select style={inputStyle}>
+          <select style={inputStyle} value={floorSel} onChange={(e) => setFloorSel(e.target.value)}>
             <option>Ground floor</option><option>1st floor</option><option>2nd floor</option><option>3rd floor</option>
             <option>4th floor</option><option>5th floor</option><option>6th floor or higher</option><option>Not applicable</option>
           </select>
         </Field>
         <Field label={u.pf_block}>
-          <input style={inputStyle} placeholder="e.g. Block B12" />
+          <input style={inputStyle} value={block} onChange={(e) => setBlock(e.target.value)} placeholder="e.g. Block B12" />
         </Field>
       </div>
       <Field label={u.pf_area}>
-        <input style={inputStyle} type="number" min="1" placeholder="e.g. 85" />
+        <input style={inputStyle} type="number" min="1" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. 85" />
       </Field>
       <Field label={u.pf_features}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -888,7 +941,7 @@ function PostForm({ role, onDone, account, lang = "en" }) {
         </div>
       </Field>
       <Field label={u.pf_description}>
-        <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }}
+        <textarea rows={4} style={{ ...inputStyle, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Ground floor, 2 rooms in a quiet shared compound near the bus station. Water comes daily, separate electric meter, 10 minutes walk to the market…" />
       </Field>
       <Field label={`${u.pf_photos} — ${u.pf_photoCount(photos.length)}`}>
@@ -923,15 +976,15 @@ function PostForm({ role, onDone, account, lang = "en" }) {
         </select>
       </Field>
       <Field label={u.pf_neighbourhood}>
-        <input style={inputStyle} placeholder={`e.g. ${cityObj.hoods[0]}`} list="hood-suggestions" />
+        <input style={inputStyle} value={hood} onChange={(e) => setHood(e.target.value)} placeholder={`e.g. ${cityObj.hoods[0]}`} list="hood-suggestions" />
         <datalist id="hood-suggestions">
           {cityObj.hoods.map((h) => <option key={h} value={h} />)}
         </datalist>
       </Field>
-      <Field label={u.pf_rent}><input style={inputStyle} type="number" placeholder="e.g. 25000" /></Field>
-      <Field label={u.pf_titleField}><input style={inputStyle} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
+      <Field label={u.pf_rent}><input style={inputStyle} type="number" value={rent} onChange={(e) => setRent(e.target.value)} placeholder="e.g. 25000" /></Field>
+      <Field label={u.pf_titleField}><input style={inputStyle} value={titleField} onChange={(e) => setTitleField(e.target.value)} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
       <Field label={u.pf_contactPhone}>
-        <input style={inputStyle} inputMode="tel" placeholder="+251 9…" />
+        <input style={inputStyle} inputMode="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
           Leave empty to use your registered contact{account ? <> (<strong>{account.contact}</strong>)</> : ""}. Fill this only if tenants should reach you on a different number for this property.
         </div>
@@ -970,7 +1023,7 @@ function PostForm({ role, onDone, account, lang = "en" }) {
 }
 
 /* ================= TENANT EXPERIENCE ================= */
-function TenantApp({ tab, initialChatListingId, lang }) {
+function TenantApp({ tab, initialChatListingId, lang, listings }) {
   const u = UI[lang];
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
@@ -992,14 +1045,14 @@ function TenantApp({ tab, initialChatListingId, lang }) {
   const cityObj = regionObj?.cities.find((c) => c.name === city);
 
   const results = useMemo(() =>
-    LISTINGS.filter((l) =>
+    listings.filter((l) =>
       (!region || l.region === region) &&
       (!city || l.city === city) &&
       (!hood || l.hood === hood) &&
       (ptype === "All" || l.type === ptype) &&
       l.price <= maxPrice
     ).sort((a, b) => new Date(b.posted) - new Date(a.posted)),
-    [region, city, hood, ptype, maxPrice]);
+    [region, city, hood, ptype, maxPrice, listings]);
 
   const toggleSave = (id) => setSaved((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const clearFrom = (level) => {
@@ -1015,7 +1068,7 @@ function TenantApp({ tab, initialChatListingId, lang }) {
       <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>{u.saved_subtitle}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>{u.saved_empty}</div>}
-        {LISTINGS.filter((l) => saved.includes(l.id)).map((l) => (
+        {listings.filter((l) => saved.includes(l.id)).map((l) => (
           <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode lang={lang} />
         ))}
       </div>
@@ -1094,14 +1147,14 @@ function TenantApp({ tab, initialChatListingId, lang }) {
 }
 
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
-function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang }) {
+function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, listings, onCreateListing }) {
   const u = UI[lang];
   const me = DEMO[role];
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
   const [openThreadId, setOpenThreadId] = useState(null);
 
-  const mine = LISTINGS.filter((l) => l.name === me).sort((a, b) => new Date(b.posted) - new Date(a.posted));
+  const mine = listings.filter((l) => l.name === me).sort((a, b) => new Date(b.posted) - new Date(a.posted));
   const myIds = mine.map((l) => l.id);
   const myThreads = chats
     .filter((t) => myIds.includes(t.listingId) && t.messages.length > 0)
@@ -1109,14 +1162,14 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang }) {
   const totalViews = mine.reduce((s, l) => s + l.views, 0);
 
   const openThread = myThreads.find((t) => t.id === openThreadId);
-  const openListing = openThread ? LISTINGS.find((l) => l.id === openThread.listingId) : null;
+  const openListing = openThread ? listings.find((l) => l.id === openThread.listingId) : null;
 
   let body;
   if (tab === "post") {
     body = (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "26px 20px 60px" }}>
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "22px 24px" }}>
-          <PostForm role={role} onDone={() => setTab("listings")} account={account} lang={lang} />
+          <PostForm role={role} onDone={() => setTab("listings")} account={account} lang={lang} onCreateListing={onCreateListing} />
         </div>
       </div>
     );
@@ -1134,7 +1187,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang }) {
             </div>
           )}
           {myThreads.map((t) => {
-            const l = LISTINGS.find((x) => x.id === t.listingId);
+            const l = listings.find((x) => x.id === t.listingId);
             const last = t.messages[t.messages.length - 1];
             const awaiting = last.from === "tenant";
             return (
@@ -1283,6 +1336,13 @@ export default function KirayApp() {
   /* Chat state lives at the root so it survives role switches within a session.
      In production this is a database + real-time updates (e.g. Supabase/Firebase). */
   const [chats, setChats] = useState(SEED_CHATS);
+  // Seeded from the sample data, but a real, mutable array from here on —
+  // posting a listing now actually adds to this, visible to every role in
+  // this session (still session-only: no backend, so it resets on reload).
+  const [listings, setListings] = useState(LISTINGS);
+  const addListing = (partial) => {
+    setListings((prev) => [...prev, { id: Math.max(0, ...prev.map((l) => l.id)) + 1, ...partial }]);
+  };
 
   const sendMessage = (listingId, tenant, from, text) => {
     const msg = { from, text, at: new Date().toISOString() };
@@ -1313,8 +1373,8 @@ export default function KirayApp() {
     <div style={{ fontFamily: bodyFont, background: T.paper, minHeight: "100vh", color: T.ink }}>
       <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} lang={lang} setLang={setLang} />
       {role === "tenant"
-        ? <TenantApp tab={tab} initialChatListingId={deepLink.listingId} lang={lang} />
-        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} />}
+        ? <TenantApp tab={tab} initialChatListingId={deepLink.listingId} lang={lang} listings={listings} />
+        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} listings={listings} onCreateListing={addListing} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
         Ethio Kiray · ኢትዮ ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
       </footer>
