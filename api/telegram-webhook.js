@@ -28,7 +28,7 @@
    posted as a guest) fall back to matching Ethio Kiray's demo landlord/
    broker account, same prototype behaviour as before.
 */
-import { getAllListings } from "./_lib/listings-store.js";
+import { getAllListings, realOnly } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const APP_URL = process.env.KIRAY_APP_URL;
@@ -536,7 +536,7 @@ export default async function handler(req, res) {
 
       // Fetched once per request, straight from the live shared store —
       // includes anything posted through the app, not just the samples.
-      const listings = await getAllListings();
+      const listings = realOnly(await getAllListings()); // real users only — no sample listings
 
       if (data === "start") {
         await sendStartMenu(chatId, lang);
@@ -569,7 +569,7 @@ export default async function handler(req, res) {
     const chatId = msg.chat.id;
     const text = msg.text.trim();
     const lang = detectLang(update);
-    const listings = await getAllListings();
+    const listings = realOnly(await getAllListings()); // real users only — no sample listings
 
     if (text.startsWith("/start")) {
       // Deep link from the channel digest: "t.me/BotName?start=listing_16"

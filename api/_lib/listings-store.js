@@ -47,3 +47,13 @@ export async function addListing(partial) {
   await redis.set(KEY, [...listings, newListing]);
   return newListing;
 }
+
+// The 32 bundled sample listings (sample: true) still seed a brand-new,
+// empty store — keeps id numbering and map reference data sane — but real
+// users should only ever see genuine posts. Anything that displays
+// listings to an end user should filter through this; anything doing
+// internal bookkeeping (like id assignment in addListing above) uses the
+// full unfiltered list instead.
+export function realOnly(listings) {
+  return listings.filter((l) => !l.sample);
+}

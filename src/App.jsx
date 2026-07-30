@@ -2,8 +2,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { LISTINGS } from "./data/listings.js";
-
 /* ================= UI TRANSLATIONS (English / Amharic) =================
    Covers the app's own interface chrome — navigation, buttons, form labels,
    empty states. Listing content itself (titles, descriptions, property type
@@ -1459,11 +1457,12 @@ export default function KirayApp() {
   /* Chat state lives at the root so it survives role switches within a session.
      In production this is a database + real-time updates (e.g. Supabase/Firebase). */
   const [chats, setChats] = useState(SEED_CHATS);
-  // Starts with the bundled sample data so the page never looks empty,
-  // then swaps in the real persisted list from /api/listings once it
-  // loads. If that storage isn't set up yet, the fetch just fails quietly
-  // and this keeps working exactly as the session-only version did.
-  const [listings, setListings] = useState(LISTINGS);
+  // Starts empty — real users should only ever see real listings, not the
+  // bundled samples, so there's no "flash of fake content" before the real
+  // (already-filtered) list loads from /api/listings. If that fetch fails
+  // (storage not set up, network hiccup), this just stays empty rather
+  // than silently showing sample data.
+  const [listings, setListings] = useState([]);
   useEffect(() => {
     fetch("/api/listings")
       .then((r) => r.json())

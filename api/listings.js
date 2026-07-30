@@ -9,15 +9,15 @@
                         -> assigns an id, stores it, returns
                            { ok: true, listing: { id, ...} }
 */
-import { getAllListings, addListing } from "./_lib/listings-store.js";
+import { getAllListings, addListing, realOnly } from "./_lib/listings-store.js";
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
     // getAllListings() already falls back to sample data on any storage
-    // error, so this always succeeds — worst case, it's just not the
-    // freshest data.
+    // error, but that fallback is for keeping the endpoint alive, not for
+    // showing fake listings to real users — realOnly() strips them either way.
     const listings = await getAllListings();
-    return res.status(200).json({ ok: true, listings });
+    return res.status(200).json({ ok: true, listings: realOnly(listings) });
   }
 
   if (req.method === "POST") {

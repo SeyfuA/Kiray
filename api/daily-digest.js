@@ -55,7 +55,7 @@
    prevent an actual duplicate post; that would need a persistent store
    (e.g. Vercel KV) to remember "already posted today", which isn't set up.
 */
-import { getAllListings } from "./_lib/listings-store.js";
+import { getAllListings, realOnly } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
@@ -208,8 +208,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "KIRAY_CHANNEL_ID is not set" });
   }
 
-  const listings = await getAllListings();
+  const listings = realOnly(await getAllListings()); // real users only — no sample listings
   const { today, picks } = pickDailyListings(listings);
+
+  if (picks.length === 0) {
+    // Nothing real to post yet (e.g. right after launch, before any real
+    // Addis Ababa listings exist) — skip the post entirely rather than
+    // sending a broken "today's 0 picks" message to the channel.
+    return res.status(200).json({ ok: true, date: today, posted: 0, note: "No real listings available to post yet." });
+  }
 
   await sendMessage(
     CHANNEL_ID,
