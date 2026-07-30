@@ -750,8 +750,13 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
         </strong>
       </div>
       {l.sample && (
-        <div style={{ display: "inline-block", fontSize: 10.5, fontWeight: 700, color: "#8A6410", background: T.goldSoft, border: `1px solid ${T.gold}`, borderRadius: 999, padding: "2px 8px", margin: "4px 0 0" }}>
+        <div style={{ display: "inline-block", fontSize: 10.5, fontWeight: 700, color: "#8A6410", background: T.goldSoft, border: `1px solid ${T.gold}`, borderRadius: 999, padding: "2px 8px", margin: "4px 4px 0 0" }}>
           {UI[lang].sampleBadge}
+        </div>
+      )}
+      {l.rented && (
+        <div style={{ display: "inline-block", fontSize: 10.5, fontWeight: 700, color: "#fff", background: T.mute, borderRadius: 999, padding: "2px 8px", margin: "4px 0 0" }}>
+          {lang === "am" ? "ተከራይቷል" : "RENTED"}
         </div>
       )}
       <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
@@ -1155,6 +1160,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
 
   const results = useMemo(() =>
     listings.filter((l) =>
+      !l.rented &&
       (!region || l.region === region) &&
       (!city || l.city === city) &&
       (!hood || l.hood === hood) &&
@@ -1260,8 +1266,126 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
   return body;
 }
 
+function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
+  const [titleField, setTitleField] = useState(listing.title || "");
+  const [rent, setRent] = useState(String(listing.price ?? ""));
+  const [description, setDescription] = useState(listing.description || "");
+  const [contactPhone, setContactPhone] = useState(listing.phone || "");
+  const [feat, setFeat] = useState(listing.features || []);
+  // Existing hosted photos start as already-uploaded entries; new ones go
+  // through the same resize+upload flow as PostForm.
+  const [photos, setPhotos] = useState((listing.photos || []).map((url) => ({ localUrl: url, url, uploading: false, error: false })));
+  const photoInputRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  const toggleFeat = (f) => setFeat((s) => (s.includes(f) ? s.filter((x) => x !== f) : [...s, f]));
+
+  const addPhotos = (fileList) => {
+    const room = 7 - photos.length;
+    const chosen = Array.from(fileList).slice(0, room);
+    const entries = chosen.map((file) => ({ localUrl: URL.createObjectURL(file), url: null, uploading: true, error: false, file }));
+    setPhotos((prev) => [...prev, ...entries]);
+    entries.forEach(async (entry) => {
+      try {
+        const dataUrl = await resizeImage(entry.file);
+        const res = await fetch("/api/upload-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataUrl, filename: entry.file.name }),
+        });
+        const data = await res.json();
+        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, url: data.ok ? data.url : null, uploading: false, error: !data.ok } : p)));
+      } catch {
+        setPhotos((prev) => prev.map((p) => (p.localUrl === entry.localUrl ? { ...p, uploading: false, error: true } : p)));
+      }
+    });
+  };
+  const removePhoto = (idx) => {
+    setPhotos((prev) => {
+      const p = prev[idx];
+      if (p.file) URL.revokeObjectURL(p.localUrl); // only newly-added local previews need revoking
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const save = async () => {
+    if (!titleField.trim()) return setErr(lang === "am" ? "ርዕስ ያስፈልጋል።" : "Title is required.");
+    if (!rent || Number(rent) <= 0) return setErr(lang === "am" ? "ወርሃዊ ኪራይ ያስፈልጋል።" : "Monthly rent is required.");
+    if (photos.some((p) => p.uploading)) return setErr(lang === "am" ? "ፎቶዎች እየተላኩ ነው — ጥቂት ሰከንዶች ይጠብቁ።" : "Photos are still uploading — give it a few seconds.");
+    if (photos.some((p) => p.error)) return setErr(lang === "am" ? "አንድ ፎቶ አልተሳካም — ያስወግዱት ወይም እንደገና ይሞክሩ።" : "A photo failed to upload — remove it or try again.");
+    setErr("");
+    setSaving(true);
+    const ok = await onSave({
+      title: titleField.trim(),
+      price: Number(rent),
+      description: description.trim() || undefined,
+      phone: contactPhone.trim() || listing.phone,
+      features: feat,
+      photos: photos.map((p) => p.url).filter(Boolean),
+    });
+    setSaving(false);
+    if (ok) onClose();
+    else setErr(lang === "am" ? "ማስቀመጥ አልተቻለም — ትንሽ ቆይተው ይሞክሩ።" : "Couldn't save — try again in a moment.");
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 19 }}>{lang === "am" ? "ማስታወቂያ አርትዕ" : "Edit listing"}</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.mute }}>✕</button>
+        </div>
+        <Field label={lang === "am" ? "ርዕስ" : "Title"}>
+          <input style={inputStyle} value={titleField} onChange={(e) => setTitleField(e.target.value)} />
+        </Field>
+        <Field label={lang === "am" ? "ወርሃዊ ኪራይ (ብር)" : "Monthly rent (ETB)"}>
+          <input style={inputStyle} type="number" value={rent} onChange={(e) => setRent(e.target.value)} />
+        </Field>
+        <Field label={lang === "am" ? "ዝርዝር መግለጫ" : "Description"}>
+          <textarea rows={3} style={{ ...inputStyle, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </Field>
+        <Field label={lang === "am" ? "የመገናኛ ስልክ" : "Contact phone"}>
+          <input style={inputStyle} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder={listing.phone} />
+        </Field>
+        <Field label={lang === "am" ? "ገፅታዎች" : "Features"}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {FEATURE_OPTIONS.map((f) => (
+              <Chip key={f} small active={feat.includes(f)} onClick={() => toggleFeat(f)}>{feat.includes(f) ? "✓ " : ""}{f}</Chip>
+            ))}
+          </div>
+        </Field>
+        <Field label={`${lang === "am" ? "ፎቶዎች" : "Photos"} — ${photos.length}/7`}>
+          <input ref={photoInputRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {photos.map((p, idx) => (
+              <div key={p.localUrl} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: `1px solid ${p.error ? T.danger : T.line}` }}>
+                <img src={p.localUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: p.uploading ? 0.5 : 1 }} />
+                {p.uploading && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#fff", background: "rgba(0,0,0,.25)" }}>…</div>}
+                <button type="button" onClick={() => removePhoto(idx)} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(0,0,0,.65)", color: "#fff", fontSize: 11, cursor: "pointer", lineHeight: "18px", padding: 0 }}>✕</button>
+              </div>
+            ))}
+            {photos.length < 7 && (
+              <button type="button" onClick={() => photoInputRef.current?.click()} style={{ width: 72, height: 72, borderRadius: 8, border: `1.5px dashed ${T.line}`, background: T.paper, color: T.mute, fontSize: 11, cursor: "pointer" }}>
+                {lang === "am" ? "+ ጨምር" : "+ Add"}
+              </button>
+            )}
+          </div>
+        </Field>
+        {err && <div style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button onClick={onClose} style={{ ...btnGhost, flex: 1 }}>{lang === "am" ? "ይቅር" : "Cancel"}</button>
+          <button onClick={save} disabled={saving} style={{ ...btnPrimary, flex: 1, opacity: saving ? 0.7 : 1 }}>
+            {saving ? "…" : lang === "am" ? "አስቀምጥ" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ================= LANDLORD / BROKER EXPERIENCE ================= */
-function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, listings, onCreateListing }) {
+function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, listings, onCreateListing, onUpdateListing }) {
   const u = UI[lang];
   // Real Telegram sign-in -> isolate strictly by that person's own id.
   // No Telegram sign-in (guest testing in a plain browser) -> fall back to
@@ -1272,6 +1396,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
   const isBroker = role === "broker";
   const [selected, setSelected] = useState(null);
   const [openThreadId, setOpenThreadId] = useState(null);
+  const [editingListing, setEditingListing] = useState(null);
 
   const mine = listings
     .filter((l) => (ownerId ? l.ownerId === ownerId : l.name === DEMO[role]))
@@ -1367,10 +1492,21 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
           <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {mine.map((l) => {
               const inq = myThreads.filter((t) => t.listingId === l.id).length;
+              // Only real, server-verifiable ownership gets working edit controls —
+              // a demo-fallback match (no ownerId) can't be edited via the
+              // authenticated endpoint, so there's nothing honest to wire up for it.
+              const canManage = l.ownerId && account?.telegramId && l.ownerId === account.telegramId;
               return (
-                <article key={l.id} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
+                <article key={l.id} style={{ background: T.card, border: `1px solid ${l.rented ? T.line : T.line}`, borderRadius: 14, padding: "14px 16px", opacity: l.rented ? 0.7 : 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                    <h3 style={{ margin: 0, fontFamily: displayFont, fontSize: 15, fontWeight: 700 }}>{l.title}</h3>
+                    <h3 style={{ margin: 0, fontFamily: displayFont, fontSize: 15, fontWeight: 700 }}>
+                      {l.title}
+                      {l.rented && (
+                        <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 700, color: "#fff", background: T.mute, borderRadius: 999, padding: "2px 8px", verticalAlign: "middle" }}>
+                          {lang === "am" ? "ተከራይቷል" : "RENTED"}
+                        </span>
+                      )}
+                    </h3>
                     <strong style={{ color: T.forest, whiteSpace: "nowrap", fontSize: 14.5 }}>{fmtETB(l.price)}/mo</strong>
                   </div>
                   <div style={{ fontSize: 12.5, color: T.mute, margin: "4px 0 8px" }}>
@@ -1383,10 +1519,17 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
                     <TypeTag type={l.type} />
                     <span>👁 {l.views} views</span>
                     <span>✉ {inq} inquiries</span>
-                    <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                      <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12 }}>Edit</button>
-                      <button style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger }}>Mark rented</button>
-                    </span>
+                    {canManage && (
+                      <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                        <button onClick={() => setEditingListing(l)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 12 }}>
+                          {lang === "am" ? "አርትዕ" : "Edit"}
+                        </button>
+                        <button onClick={() => onUpdateListing?.(l.id, { rented: !l.rented })}
+                          style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger }}>
+                          {l.rented ? (lang === "am" ? "እንደገና አስገኝ" : "Mark available") : (lang === "am" ? "ተከራይቷል ብለው ምልክት ያድርጉ" : "Mark rented")}
+                        </button>
+                      </span>
+                    )}
                   </div>
                   {isBroker && (
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${T.line}`, fontSize: 12, color: "#8A6410" }}>
@@ -1415,6 +1558,14 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
           onSend={(text) => sendMessage(openThread.listingId, openThread.tenant, "lister", text)}
           onClose={() => setOpenThreadId(null)}
           lang={lang}
+        />
+      )}
+      {editingListing && (
+        <EditListingModal
+          listing={editingListing}
+          lang={lang}
+          onClose={() => setEditingListing(null)}
+          onSave={(updates) => onUpdateListing?.(editingListing.id, updates)}
         />
       )}
     </>
@@ -1489,6 +1640,27 @@ export default function KirayApp() {
     setListings((prev) => [...prev, { id: Math.max(0, ...prev.map((l) => l.id)) + 1, ...partial }]);
   };
 
+  // Used for real edits (price, description, etc.) and for the "Mark
+  // rented"/"Mark available" toggle — same endpoint either way, which
+  // verifies server-side that whoever's asking actually owns this listing.
+  const updateListing = async (id, updates) => {
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requesterId: account?.telegramId, updates }),
+      });
+      const data = await res.json();
+      if (data.ok && data.listing) {
+        setListings((prev) => prev.map((l) => (l.id === id ? data.listing : l)));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const sendMessage = (listingId, tenant, from, text) => {
     const msg = { from, text, at: new Date().toISOString() };
     setChats((prev) => {
@@ -1519,7 +1691,7 @@ export default function KirayApp() {
       <Header role={role} tabs={tabsByRole[role]} tab={tab} setTab={setTab} onSwitchRole={() => setRole(null)} account={account} lang={lang} setLang={setLang} />
       {role === "tenant"
         ? <TenantApp tab={tab} initialChatListingId={deepLink.listingId} lang={lang} listings={listings} />
-        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} listings={listings} onCreateListing={addListing} />}
+        : <ManagerApp role={role} tab={tab} setTab={setTab} chats={chats} sendMessage={sendMessage} account={account} lang={lang} listings={listings} onCreateListing={addListing} onUpdateListing={updateListing} />}
       <footer style={{ textAlign: "center", padding: "14px 0 26px", fontSize: 12, color: T.mute }}>
         Ethio Kiray · ኢትዮ ኪራይ — prototype. Listings and phone numbers are sample data. Map © OpenStreetMap contributors.
       </footer>

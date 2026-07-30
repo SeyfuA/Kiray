@@ -48,6 +48,31 @@ export async function addListing(partial) {
   return newListing;
 }
 
+// Verifies ownership server-side (requesterId must match the listing's
+// ownerId) — a hidden edit button on the frontend isn't real security,
+// since anyone could call this endpoint directly. id/ownerId can't be
+// changed through this, whatever the caller sends for them is ignored.
+export async function updateListing(id, updates, requesterId) {
+  const listings = await getAllListings();
+  const idx = listings.findIndex((l) => l.id === Number(id));
+  if (idx === -1) {
+    const err = new Error("Listing not found");
+    err.status = 404;
+    throw err;
+  }
+  const existing = listings[idx];
+  if (!requesterId || !existing.ownerId || existing.ownerId !== requesterId) {
+    const err = new Error("Not authorized to edit this listing");
+    err.status = 403;
+    throw err;
+  }
+  const updated = { ...existing, ...updates, id: existing.id, ownerId: existing.ownerId, sample: existing.sample };
+  const next = [...listings];
+  next[idx] = updated;
+  await redis.set(KEY, next);
+  return updated;
+}
+
 // The 32 bundled sample listings (sample: true) still seed a brand-new,
 // empty store — keeps id numbering and map reference data sane — but real
 // users should only ever see genuine posts. Anything that displays

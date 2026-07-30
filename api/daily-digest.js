@@ -127,7 +127,7 @@ const DIGEST_CITY = "Addis Ababa";
 function pickDailyListings(listings) {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
   const rand = seededRandom(today);
-  const pool = listings.filter((l) => l.city === DIGEST_CITY);
+  const pool = listings.filter((l) => l.city === DIGEST_CITY && !l.rented);
   const shuffled = [...pool].sort(() => rand() - 0.5);
   const count = Math.min(3 + Math.floor(rand() * 3), shuffled.length); // 3-5, capped to what's available
   return { today, picks: shuffled.slice(0, count) };

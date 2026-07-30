@@ -341,6 +341,7 @@ async function sendStartMenu(chatId, lang) {
 }
 
 async function sendRegionMenu(chatId, lang, listings) {
+  listings = listings.filter((l) => !l.rented); // tenant-facing browse: available only
   const s = STR[lang];
   const rows = getRegions(listings).map((r, i) => [
     { text: `${r} (${countListings(listings, r)})`, callback_data: cd(lang, `reg_${i}`) },
@@ -351,6 +352,7 @@ async function sendRegionMenu(chatId, lang, listings) {
 }
 
 async function sendCityMenu(chatId, lang, regionIdx, listings) {
+  listings = listings.filter((l) => !l.rented); // tenant-facing browse: available only
   const s = STR[lang];
   const regions = getRegions(listings);
   const region = regions[regionIdx];
@@ -365,6 +367,7 @@ async function sendCityMenu(chatId, lang, regionIdx, listings) {
 }
 
 async function sendCityListings(chatId, lang, regionIdx, cityIdx, listings) {
+  listings = listings.filter((l) => !l.rented); // tenant-facing browse: available only
   const s = STR[lang];
   const regions = getRegions(listings);
   const region = regions[regionIdx];
@@ -394,6 +397,7 @@ async function sendCityListings(chatId, lang, regionIdx, cityIdx, listings) {
 }
 
 async function sendTopListings(chatId, lang, query, listings) {
+  listings = listings.filter((l) => !l.rented); // tenant-facing browse: available only
   const s = STR[lang];
   const matches = searchListings(listings, query);
   const results = query ? rankListings(matches) : topAcrossCities(matches, listings.length);
