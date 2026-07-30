@@ -1137,7 +1137,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ color: T.mute }}>{u.maxRent}</span>
-          <input type="range" min={5000} max={150000} step={5000} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} style={{ accentColor: T.forest }} />
+          <input type="range" min={100} max={1000000} step={100} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} style={{ accentColor: T.forest }} />
           <strong>{fmtETB(maxPrice)}/mo</strong>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 13, color: T.mute }}>
