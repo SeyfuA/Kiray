@@ -45,7 +45,7 @@ const UI = {
     pf_specificArea: "Neighbourhood",
     pf_specificAreaHint: "The specific area, street, or landmark — shown to tenants exactly as you type it.",
     pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing",
-    pf_err_noContact: "Add a phone number, or sign in with a Telegram account that has a username, so tenants have a way to reach you.",
+    pf_err_noContact: "Add a phone number so tenants have a way to reach you.",
     pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
     pf_orTapMap: "or tap the map to place the pin, then drag it to adjust",
     pf_confirmPin: "I confirm this pin is the actual location of the property",
@@ -93,7 +93,7 @@ const UI = {
     pf_specificArea: "ሰፈር",
     pf_specificAreaHint: "የተለየ አካባቢ፣ መንገድ ወይም መለያ ቦታ — ለተከራዮች እርስዎ እንደጻፉት በትክክል ይታያል።",
     pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ",
-    pf_err_noContact: "ስልክ ቁጥር ያክሉ፣ ወይም የተጠቃሚ ስም ያለው የቴሌግራም አካውንት ይግቡ፣ ተከራዮች እንዲያገኙዎት።",
+    pf_err_noContact: "ስልክ ቁጥር ያክሉ፣ ተከራዮች እንዲያገኙዎት።",
     pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
     pf_orTapMap: "ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ፣ ከዚያም ለማስተካከል ይጎትቱት",
     pf_confirmPin: "ይህ ፒን የንብረቱ ትክክለኛ አካባቢ መሆኑን አረጋግጣለሁ",
@@ -811,7 +811,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
             <div style={{ fontSize: 12, color: T.mute, marginTop: 2 }}>
               Posted on {fullDate(l.posted)}
               {l.phone && <> · 📱 {fmtPhone(l.phone)}</>}
-              {!l.phone && l.telegramUsername && <> · 💬 @{l.telegramUsername}</>}
+              {l.telegramUsername && <> · 💬 @{l.telegramUsername}</>}
             </div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
@@ -947,7 +947,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
     if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
     if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
     if (!specificArea.trim()) return setFormErr(u.pf_specificArea + " is required.");
-    if (!contactPhone.trim() && !account?.username) return setFormErr(u.pf_err_noContact);
+    if (!contactPhone.trim()) return setFormErr(u.pf_err_noContact);
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
     if (photos.some((p) => p.uploading)) return setFormErr(u.pf_err_photosUploading);
@@ -977,11 +977,11 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       lister: isBroker ? "Broker" : "Owner",
       name: account?.name || DEMO[role], // shown to tenants
       ownerId: account?.telegramId ?? null, // ties this listing to the real signed-in person, if any
-      // Only ever a real phone number, or nothing — a Telegram handle isn't
-      // a phone number and dialling it would just fail. Left empty, tenants
-      // reach the lister via the Telegram chat link below instead.
-      phone: contactPhone.trim() || null,
-      telegramUsername: account?.username || null, // powers a direct "Chat on Telegram" link to the actual poster
+      // Always a real phone number now (required — see the validation
+      // above) — never a Telegram handle, which isn't a phone number and
+      // would make the Call button dial something broken.
+      phone: contactPhone.trim(),
+      telegramUsername: account?.username || null, // an extra way to reach them, on top of the phone above
       owner: isBroker ? (ownerName.trim() || null) : null,
       verified: false, // new listings start unverified, same as a real submission would
       views: 0,
@@ -1127,8 +1127,8 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
         <input style={inputStyle} inputMode="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
           {account?.username
-            ? <>Leave empty and tenants can still reach you by chatting on Telegram (<strong>@{account.username}</strong>). Fill this in if you'd also like them to be able to call.</>
-            : <>You'll need to add a phone number here — your Telegram account doesn't have a username set, so there's no Telegram chat link to fall back on.</>}
+            ? <>Tenants will be able to call this number, and also chat with you directly on Telegram (<strong>@{account.username}</strong>).</>
+            : <>Tenants will be able to call this number to reach you.</>}
         </div>
       </Field>
       <Field label={u.pf_location}>
@@ -1340,6 +1340,8 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
   const save = async () => {
     if (!titleField.trim()) return setErr(lang === "am" ? "ርዕስ ያስፈልጋል።" : "Title is required.");
     if (!rent || Number(rent) <= 0) return setErr(lang === "am" ? "ወርሃዊ ኪራይ ያስፈልጋል።" : "Monthly rent is required.");
+    if (!contactPhone.trim()) return setErr(lang === "am" ? "ስልክ ቁጥር ያስፈልጋል።" : "Phone number is required.");
+    if (contactPhone.trim().startsWith("@")) return setErr(lang === "am" ? "ይህ የቴሌግራም የተጠቃሚ ስም ይመስላል፣ ስልክ ቁጥር አይደለም። ትክክለኛ ስልክ ቁጥር ያስገቡ።" : "That looks like a Telegram username, not a phone number — enter a real phone number.");
     if (photos.some((p) => p.uploading)) return setErr(lang === "am" ? "ፎቶዎች እየተላኩ ነው — ጥቂት ሰከንዶች ይጠብቁ።" : "Photos are still uploading — give it a few seconds.");
     if (photos.some((p) => p.error)) return setErr(lang === "am" ? "አንድ ፎቶ አልተሳካም — ያስወግዱት ወይም እንደገና ይሞክሩ።" : "A photo failed to upload — remove it or try again.");
     setErr("");
@@ -1348,7 +1350,7 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
       title: titleField.trim(),
       price: Number(rent),
       description: description.trim() || undefined,
-      phone: contactPhone.trim() || listing.phone,
+      phone: contactPhone.trim(),
       features: feat,
       photos: photos.map((p) => p.url).filter(Boolean),
     });
@@ -1374,7 +1376,7 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
           <textarea rows={3} style={{ ...inputStyle, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <Field label={lang === "am" ? "የመገናኛ ስልክ" : "Contact phone"}>
-          <input style={inputStyle} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder={listing.phone} />
+          <input style={inputStyle} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+251 9…" />
         </Field>
         <Field label={lang === "am" ? "ገፅታዎች" : "Features"}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
