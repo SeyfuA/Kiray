@@ -15,19 +15,27 @@
    (update.from.language_code), with a manual 🌐 toggle to override it.
    Typed commands (/listings, /help) re-detect from that same setting each time.
 
-   OWNER/BROKER DEMO NOTE: "My listings" mirrors the web app's prototype
-   behaviour — it shows Ethio Kiray's sample landlord/broker account (there's no
-   database yet, so listings aren't tied to individual real Telegram users).
-   Posting and full management still happen in the app itself, which is why
-   those buttons deep-link into it — including its interactive map pin picker.
+   DATA: listings now come from getAllListings() (api/_lib/listings-store.js)
+   — the same live, shared store the app and channel digest read from — not
+   the static sample file directly. A listing posted through the app shows
+   up here too. Fetched once per request and threaded through as a plain
+   parameter, since these are simple synchronous helpers over an array.
+
+   OWNERSHIP: "My listings" filters by the real Telegram user chatting with
+   the bot (their user id) when a listing has that id attached — i.e. when
+   it was posted by that same person, signed in via the app's Telegram
+   Mini App. Listings with no owner id (the original samples, or anything
+   posted as a guest) fall back to matching Ethio Kiray's demo landlord/
+   broker account, same prototype behaviour as before.
 */
-import { LISTINGS } from "../src/data/listings.js";
+import { getAllListings } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const APP_URL = process.env.KIRAY_APP_URL;
 const TOP_COUNT = 5;
 
-// Mirrors DEMO in src/App.jsx — the prototype's single sample landlord/broker.
+// Mirrors DEMO in src/App.jsx — the fallback identity for listings with no
+// real owner attached (the original samples, or anything posted as a guest).
 const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
 
 /* ================= STRINGS (English / Amharic) =================
@@ -89,9 +97,9 @@ const STR = {
     btn_manage_in_app: "🗂 Manage all listings in app",
     btn_view_here: "📋 View my listings here",
     my_listings_header: (name, n) => `📋 <b>${name}'s listings</b> — ${n} propert${n !== 1 ? "ies" : "y"}:`,
-    my_listings_empty: "No listings under this demo account yet — post one from the app to see it here.",
+    my_listings_empty: "No listings found for you yet — post one from the app to see it here.",
     demo_note:
-      "ℹ️ Demo note: this shows Ethio Kiray's sample landlord/broker account. Once real accounts are connected to a database, this will show your own listings instead.",
+      "ℹ️ Showing Ethio Kiray's sample landlord/broker account — sign in via the app's \"Open Web App\" button and post a listing there to see your own listings here instead.",
     manage_in_app_btn: "✏️ Manage in app",
   },
   am: {
@@ -150,14 +158,14 @@ const STR = {
     btn_manage_in_app: "🗂 ሁሉንም ማስታወቂያዎች በመተግበሪያው ያስተዳድሩ",
     btn_view_here: "📋 ማስታወቂያዎቼን እዚህ ይመልከቱ",
     my_listings_header: (name, n) => `📋 <b>የ${name} ማስታወቂያዎች</b> — ${n} ንብረት${n !== 1 ? "ዎች" : ""}፦`,
-    my_listings_empty: "በዚህ የማሳያ አካውንት ስር ምንም ማስታወቂያ የለም — ከመተግበሪያው አዲስ ይለጥፉ እዚህ ለማየት።",
+    my_listings_empty: "ለእርስዎ ምንም ማስታወቂያ አልተገኘም — ከመተግበሪያው አዲስ ይለጥፉ እዚህ ለማየት።",
     demo_note:
-      "ℹ️ ማሳሰቢያ፦ ይህ የኢትዮ ኪራይ ናሙና አከራይ/ደላላ አካውንት ያሳያል። ትክክለኛ አካውንቶች ወደፊት ከዳታቤዝ ጋር ሲገናኙ የራስዎን ማስታወቂያዎች ያሳያሉ።",
+      "ℹ️ የኢትዮ ኪራይ ናሙና አከራይ/ደላላ አካውንት እያሳየ ነው — በመተግበሪያው \"መተግበሪያውን ክፈት\" በኩል ይግቡ እና ማስታወቂያ ይለጥፉ የራስዎን ማስታወቂያዎች እዚህ ለማየት።",
     manage_in_app_btn: "✏️ በመተግበሪያው ያስተዳድሩ",
   },
 };
 
-/* ---------- language plumbing (stateless — no database) ---------- */
+/* ---------- language plumbing (stateless — no database needed for this part) ---------- */
 
 function detectLang(update) {
   const code = update?.message?.from?.language_code || update?.callback_query?.from?.language_code || "";
@@ -178,12 +186,12 @@ function langToggleRow(lang) {
   return [{ text: STR[other].self_lang_label, callback_data: cd(other, "start") }];
 }
 
-/* ---------- data helpers ---------- */
+/* ---------- data helpers (all take the live listings array as a parameter) ---------- */
 
-function searchListings(query) {
+function searchListings(listings, query) {
   const q = query.trim().toLowerCase();
-  if (!q) return LISTINGS;
-  return LISTINGS.filter((l) =>
+  if (!q) return listings;
+  return listings.filter((l) =>
     [l.city, l.region, l.hood, l.area, l.kind, l.type, l.title]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(q))
@@ -207,22 +215,23 @@ function topAcrossCities(list, n) {
   return rankListings([...bestPerCity.values()]).slice(0, n);
 }
 
-function findListing(id) {
-  return LISTINGS.find((l) => l.id === Number(id));
+function findListing(listings, id) {
+  return listings.find((l) => l.id === Number(id));
 }
 
-// Region -> city/town hierarchy, derived straight from the listings data
-// (so it's always in sync — no separate list to maintain).
-function getRegions() {
-  return [...new Set(LISTINGS.map((l) => l.region))].sort((a, b) => a.localeCompare(b));
+// Region -> city/town hierarchy, derived straight from the live listings
+// data (so it's always in sync — no separate list to maintain, and it
+// automatically includes any new region/city a real listing introduces).
+function getRegions(listings) {
+  return [...new Set(listings.map((l) => l.region))].sort((a, b) => a.localeCompare(b));
 }
-function getCities(region) {
-  return [...new Set(LISTINGS.filter((l) => l.region === region).map((l) => l.city))].sort((a, b) =>
+function getCities(listings, region) {
+  return [...new Set(listings.filter((l) => l.region === region).map((l) => l.city))].sort((a, b) =>
     a.localeCompare(b)
   );
 }
-function countListings(region, city) {
-  return LISTINGS.filter((l) => l.region === region && (!city || l.city === city)).length;
+function countListings(listings, region, city) {
+  return listings.filter((l) => l.region === region && (!city || l.city === city)).length;
 }
 
 /* ---------- formatting ---------- */
@@ -331,40 +340,40 @@ async function sendStartMenu(chatId, lang) {
   await sendMessage(chatId, STR[lang].start, { reply_markup: startKeyboard(lang) });
 }
 
-async function sendRegionMenu(chatId, lang) {
+async function sendRegionMenu(chatId, lang, listings) {
   const s = STR[lang];
-  const rows = getRegions().map((r, i) => [
-    { text: `${r} (${countListings(r)})`, callback_data: cd(lang, `reg_${i}`) },
+  const rows = getRegions(listings).map((r, i) => [
+    { text: `${r} (${countListings(listings, r)})`, callback_data: cd(lang, `reg_${i}`) },
   ]);
   rows.push([{ text: s.btn_back_main, callback_data: cd(lang, "start") }]);
   if (openAppRow(lang)) rows.push(openAppRow(lang));
   await sendMessage(chatId, s.choose_region, { reply_markup: { inline_keyboard: rows } });
 }
 
-async function sendCityMenu(chatId, lang, regionIdx) {
+async function sendCityMenu(chatId, lang, regionIdx, listings) {
   const s = STR[lang];
-  const regions = getRegions();
+  const regions = getRegions(listings);
   const region = regions[regionIdx];
-  if (!region) return sendRegionMenu(chatId, lang);
+  if (!region) return sendRegionMenu(chatId, lang, listings);
 
-  const rows = getCities(region).map((c, i) => [
-    { text: `${c} (${countListings(region, c)})`, callback_data: cd(lang, `city_${regionIdx}_${i}`) },
+  const rows = getCities(listings, region).map((c, i) => [
+    { text: `${c} (${countListings(listings, region, c)})`, callback_data: cd(lang, `city_${regionIdx}_${i}`) },
   ]);
   rows.push([{ text: s.back_regions, callback_data: cd(lang, "back_regions") }]);
   if (openAppRow(lang)) rows.push(openAppRow(lang));
   await sendMessage(chatId, s.choose_city(region), { reply_markup: { inline_keyboard: rows } });
 }
 
-async function sendCityListings(chatId, lang, regionIdx, cityIdx) {
+async function sendCityListings(chatId, lang, regionIdx, cityIdx, listings) {
   const s = STR[lang];
-  const regions = getRegions();
+  const regions = getRegions(listings);
   const region = regions[regionIdx];
-  if (!region) return sendRegionMenu(chatId, lang);
-  const cities = getCities(region);
+  if (!region) return sendRegionMenu(chatId, lang, listings);
+  const cities = getCities(listings, region);
   const city = cities[cityIdx];
-  if (!city) return sendCityMenu(chatId, lang, regionIdx);
+  if (!city) return sendCityMenu(chatId, lang, regionIdx, listings);
 
-  const results = rankListings(LISTINGS.filter((l) => l.region === region && l.city === city));
+  const results = rankListings(listings.filter((l) => l.region === region && l.city === city));
   const shown = results.slice(0, TOP_COUNT);
 
   await sendMessage(chatId, s.city_listings_header(city, region, results.length, shown.length));
@@ -384,10 +393,10 @@ async function sendCityListings(chatId, lang, regionIdx, cityIdx) {
   });
 }
 
-async function sendTopListings(chatId, lang, query = "") {
+async function sendTopListings(chatId, lang, query, listings) {
   const s = STR[lang];
-  const matches = searchListings(query);
-  const results = query ? rankListings(matches) : topAcrossCities(matches, LISTINGS.length);
+  const matches = searchListings(listings, query);
+  const results = query ? rankListings(matches) : topAcrossCities(matches, listings.length);
 
   if (results.length === 0) {
     await sendMessage(chatId, s.no_results(query));
@@ -453,16 +462,39 @@ async function sendRoleTools(chatId, lang, role) {
   await sendMessage(chatId, s.role_tools_title(label), { reply_markup: { inline_keyboard: rows } });
 }
 
-async function sendMyListingsPreview(chatId, lang, role) {
+// ownerTelegramId = whoever is actually tapping the button right now. If we
+// know exactly who they are (they've signed in via the app's Mini App at
+// some point), show only their real listings — even if that's none yet.
+// Only a true guest (no Telegram identity at all) falls back to the shared
+// demo account, same prototype behaviour as before.
+async function sendMyListingsPreview(chatId, lang, role, listings, ownerTelegramId) {
   const s = STR[lang];
-  const name = DEMO[role];
-  const mine = rankListings(LISTINGS.filter((l) => l.name === name));
 
+  if (ownerTelegramId) {
+    const mine = rankListings(listings.filter((l) => l.ownerId === ownerTelegramId));
+    if (mine.length === 0) {
+      await sendMessage(chatId, s.my_listings_empty);
+      return;
+    }
+    await sendMessage(chatId, s.my_listings_header(mine[0].name, mine.length));
+    for (const l of mine.slice(0, TOP_COUNT)) {
+      await sendPhotoAlbum(chatId, l);
+      await sendVenuePin(chatId, l);
+      await sendMessage(chatId, `${formatListing(l, lang)}\n${s.views(l.views)}`, {
+        reply_markup: APP_URL
+          ? { inline_keyboard: [[{ text: s.manage_in_app_btn, web_app: { url: `${APP_URL}?role=${role}&tab=listings` } }]] }
+          : undefined,
+      });
+    }
+    return;
+  }
+
+  const name = DEMO[role];
+  const mine = rankListings(listings.filter((l) => l.name === name && !l.ownerId));
   if (mine.length === 0) {
     await sendMessage(chatId, s.my_listings_empty);
     return;
   }
-
   await sendMessage(chatId, s.my_listings_header(name, mine.length));
   for (const l of mine.slice(0, TOP_COUNT)) {
     await sendPhotoAlbum(chatId, l);
@@ -502,25 +534,29 @@ export default async function handler(req, res) {
       await answerCallbackQuery(cq.id);
       if (!chatId) return res.status(200).json({ ok: true });
 
+      // Fetched once per request, straight from the live shared store —
+      // includes anything posted through the app, not just the samples.
+      const listings = await getAllListings();
+
       if (data === "start") {
         await sendStartMenu(chatId, lang);
       } else if (data === "browse" || data === "back_regions") {
-        await sendRegionMenu(chatId, lang);
+        await sendRegionMenu(chatId, lang, listings);
       } else if (data.startsWith("back_cities_")) {
-        await sendCityMenu(chatId, lang, Number(data.replace("back_cities_", "")));
+        await sendCityMenu(chatId, lang, Number(data.replace("back_cities_", "")), listings);
       } else if (data.startsWith("reg_")) {
-        await sendCityMenu(chatId, lang, Number(data.replace("reg_", "")));
+        await sendCityMenu(chatId, lang, Number(data.replace("reg_", "")), listings);
       } else if (data.startsWith("city_")) {
         const [, regionIdx, cityIdx] = data.split("_");
-        await sendCityListings(chatId, lang, Number(regionIdx), Number(cityIdx));
+        await sendCityListings(chatId, lang, Number(regionIdx), Number(cityIdx), listings);
       } else if (data.startsWith("contact_")) {
-        await sendContactCard(chatId, lang, findListing(data.replace("contact_", "")));
+        await sendContactCard(chatId, lang, findListing(listings, data.replace("contact_", "")));
       } else if (data === "owner") {
         await sendOwnerMenu(chatId, lang);
       } else if (data.startsWith("ownerlist_")) {
         await sendRoleTools(chatId, lang, data.replace("ownerlist_", ""));
       } else if (data.startsWith("ownerview_")) {
-        await sendMyListingsPreview(chatId, lang, data.replace("ownerview_", ""));
+        await sendMyListingsPreview(chatId, lang, data.replace("ownerview_", ""), listings, cq.from?.id);
       }
 
       return res.status(200).json({ ok: true });
@@ -533,6 +569,7 @@ export default async function handler(req, res) {
     const chatId = msg.chat.id;
     const text = msg.text.trim();
     const lang = detectLang(update);
+    const listings = await getAllListings();
 
     if (text.startsWith("/start")) {
       // Deep link from the channel digest: "t.me/BotName?start=listing_16"
@@ -540,7 +577,7 @@ export default async function handler(req, res) {
       // first (with working Contact & chat), then the usual menu below it.
       const payload = text.replace("/start", "").trim();
       const match = payload.match(/^listing_(\d+)$/);
-      const linkedListing = match ? findListing(match[1]) : null;
+      const linkedListing = match ? findListing(listings, match[1]) : null;
       if (linkedListing) {
         await sendPhotoAlbum(chatId, linkedListing);
         await sendVenuePin(chatId, linkedListing);
@@ -548,12 +585,12 @@ export default async function handler(req, res) {
       }
       await sendStartMenu(chatId, lang);
     } else if (text.startsWith("/help")) {
-      await sendMessage(chatId, STR[lang].help(getRegions().length), {
+      await sendMessage(chatId, STR[lang].help(getRegions(listings).length), {
         reply_markup: APP_URL ? { inline_keyboard: [[{ text: STR[lang].btn_open_app, web_app: { url: APP_URL } }]] } : undefined,
       });
     } else if (text.startsWith("/listings")) {
       const query = text.replace("/listings", "").trim();
-      await sendTopListings(chatId, lang, query);
+      await sendTopListings(chatId, lang, query, listings);
     } else {
       await sendMessage(chatId, STR[lang].unknown_command);
     }

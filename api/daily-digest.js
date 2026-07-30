@@ -28,9 +28,10 @@
    5. Deploy. Vercel reads vercel.json and registers the daily schedule
       automatically — nothing else to run or trigger by hand.
 
-   Reuses the same TELEGRAM_BOT_TOKEN as the main bot, and the same
-   LISTINGS data as the app, so prices/photos/pins always match what's
-   live in the app.
+   Reuses the same TELEGRAM_BOT_TOKEN as the main bot, and reads listings
+   from the same live, shared store as the app and bot (see
+   api/_lib/listings-store.js) — a real Addis Ababa listing posted through
+   the app is eligible to be picked, not just the original samples.
 
    Button design note: channel posts can't use a regular Telegram Mini App
    (web_app) button — that's a hard, confirmed platform restriction, tested
@@ -54,7 +55,7 @@
    prevent an actual duplicate post; that would need a persistent store
    (e.g. Vercel KV) to remember "already posted today", which isn't set up.
 */
-import { LISTINGS } from "../src/data/listings.js";
+import { getAllListings } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
@@ -123,10 +124,10 @@ function seededRandom(seed) {
 // Change this to widen/narrow the digest to a different city or region later.
 const DIGEST_CITY = "Addis Ababa";
 
-function pickDailyListings() {
+function pickDailyListings(listings) {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
   const rand = seededRandom(today);
-  const pool = LISTINGS.filter((l) => l.city === DIGEST_CITY);
+  const pool = listings.filter((l) => l.city === DIGEST_CITY);
   const shuffled = [...pool].sort(() => rand() - 0.5);
   const count = Math.min(3 + Math.floor(rand() * 3), shuffled.length); // 3-5, capped to what's available
   return { today, picks: shuffled.slice(0, count) };
@@ -207,7 +208,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "KIRAY_CHANNEL_ID is not set" });
   }
 
-  const { today, picks } = pickDailyListings();
+  const listings = await getAllListings();
+  const { today, picks } = pickDailyListings(listings);
 
   await sendMessage(
     CHANNEL_ID,
