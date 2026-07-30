@@ -44,7 +44,8 @@ const UI = {
     pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Sub-city / Area",
     pf_specificArea: "Neighbourhood",
     pf_specificAreaHint: "The specific area, street, or landmark — shown to tenants exactly as you type it.",
-    pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing (optional)",
+    pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing",
+    pf_err_noContact: "Add a phone number, or sign in with a Telegram account that has a username, so tenants have a way to reach you.",
     pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
     pf_orTapMap: "or tap the map to place the pin, then drag it to adjust",
     pf_confirmPin: "I confirm this pin is the actual location of the property",
@@ -91,7 +92,8 @@ const UI = {
     pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ክፍለ ከተማ / አካባቢ",
     pf_specificArea: "ሰፈር",
     pf_specificAreaHint: "የተለየ አካባቢ፣ መንገድ ወይም መለያ ቦታ — ለተከራዮች እርስዎ እንደጻፉት በትክክል ይታያል።",
-    pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ (አማራጭ)",
+    pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ",
+    pf_err_noContact: "ስልክ ቁጥር ያክሉ፣ ወይም የተጠቃሚ ስም ያለው የቴሌግራም አካውንት ይግቡ፣ ተከራዮች እንዲያገኙዎት።",
     pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
     pf_orTapMap: "ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ፣ ከዚያም ለማስተካከል ይጎትቱት",
     pf_confirmPin: "ይህ ፒን የንብረቱ ትክክለኛ አካባቢ መሆኑን አረጋግጣለሁ",
@@ -249,7 +251,7 @@ const SEED_CHATS = [
 /* ================= HELPERS ================= */
 const fmtETB = (n) => "ETB " + n.toLocaleString("en-US");
 const allCities = LOCATIONS.flatMap((r) => r.cities);
-const fmtPhone = (p) => p.replace("+251", "+251 ").replace(/(\d{3})(\d{3})(\d{3})$/, "$1 $2 $3");
+const fmtPhone = (p) => (p ? p.replace("+251", "+251 ").replace(/(\d{3})(\d{3})(\d{3})$/, "$1 $2 $3") : "");
 
 function timeAgo(iso) {
   const ms = Date.now() - new Date(iso).getTime();
@@ -440,7 +442,19 @@ function openTelegramChat(listingId) {
   else window.open(url, "_blank", "noopener,noreferrer"); // plain browser visit
 }
 
+// Opens a direct chat with the actual person who posted the listing —
+// only possible when they signed in via Telegram AND have a public
+// username set (some Telegram accounts don't). Falls back to
+// openTelegramChat() above (the bot) when there's no real username to link to.
+function openPersonTelegram(username) {
+  const url = `https://t.me/${username}`;
+  const tg = window.Telegram?.WebApp;
+  if (tg?.openTelegramLink) tg.openTelegramLink(url);
+  else window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function CallButton({ phone, label }) {
+  if (!phone) return null;
   return (
     <a href={`tel:${phone}`} style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
       📞 {label || "Call / ደውል"}
@@ -671,6 +685,7 @@ function useTelegramProfile(setAccount) {
             name: fullName || (u.username ? "@" + u.username : "Telegram user"),
             method: "telegram",
             contact: u.username ? "@" + u.username : "Telegram",
+            username: u.username || null, // bare, no "@" — for building t.me/<username> links
             telegramId: u.id,
             photo: u.photo_url || null,
           });
@@ -794,12 +809,18 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
               ? <span style={{ color: T.forest, fontSize: 12 }}>✓ ID verified</span>
               : <span style={{ color: T.danger, fontSize: 12 }}>unverified</span>}
             <div style={{ fontSize: 12, color: T.mute, marginTop: 2 }}>
-              Posted on {fullDate(l.posted)} · 📱 {fmtPhone(l.phone)}
+              Posted on {fullDate(l.posted)}
+              {l.phone && <> · 📱 {fmtPhone(l.phone)}</>}
+              {!l.phone && l.telegramUsername && <> · 💬 @{l.telegramUsername}</>}
             </div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
             <CallButton phone={l.phone} />
-            <button style={btnGhost} onClick={() => openTelegramChat(l.id)}>💬 Chat on Telegram · በቴሌግራም ይወያዩ</button>
+            <button style={btnGhost} onClick={() => (l.telegramUsername ? openPersonTelegram(l.telegramUsername) : openTelegramChat(l.id))}>
+              {l.telegramUsername
+                ? `💬 Chat with ${l.name.split(" ")[0]} on Telegram`
+                : "💬 Chat on Telegram · በቴሌግራም ይወያዩ"}
+            </button>
           </div>
         </div>
       )}
@@ -926,6 +947,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
     if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
     if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
     if (!specificArea.trim()) return setFormErr(u.pf_specificArea + " is required.");
+    if (!contactPhone.trim() && !account?.username) return setFormErr(u.pf_err_noContact);
     if (!coords) return setFormErr(u.pf_err_location);
     if (!confirmed) return setFormErr(u.pf_err_confirm);
     if (photos.some((p) => p.uploading)) return setFormErr(u.pf_err_photosUploading);
@@ -955,7 +977,11 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       lister: isBroker ? "Broker" : "Owner",
       name: account?.name || DEMO[role], // shown to tenants
       ownerId: account?.telegramId ?? null, // ties this listing to the real signed-in person, if any
-      phone: contactPhone.trim() || account?.contact || "+251900000000",
+      // Only ever a real phone number, or nothing — a Telegram handle isn't
+      // a phone number and dialling it would just fail. Left empty, tenants
+      // reach the lister via the Telegram chat link below instead.
+      phone: contactPhone.trim() || null,
+      telegramUsername: account?.username || null, // powers a direct "Chat on Telegram" link to the actual poster
       owner: isBroker ? (ownerName.trim() || null) : null,
       verified: false, // new listings start unverified, same as a real submission would
       views: 0,
@@ -1100,7 +1126,9 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       <Field label={u.pf_contactPhone}>
         <input style={inputStyle} inputMode="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
-          Leave empty to use your registered contact{account ? <> (<strong>{account.contact}</strong>)</> : ""}. Fill this only if tenants should reach you on a different number for this property.
+          {account?.username
+            ? <>Leave empty and tenants can still reach you by chatting on Telegram (<strong>@{account.username}</strong>). Fill this in if you'd also like them to be able to call.</>
+            : <>You'll need to add a phone number here — your Telegram account doesn't have a username set, so there's no Telegram chat link to fall back on.</>}
         </div>
       </Field>
       <Field label={u.pf_location}>
@@ -1397,6 +1425,8 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
   const [selected, setSelected] = useState(null);
   const [openThreadId, setOpenThreadId] = useState(null);
   const [editingListing, setEditingListing] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [toggleError, setToggleError] = useState(null);
 
   const mine = listings
     .filter((l) => (ownerId ? l.ownerId === ownerId : l.name === DEMO[role]))
@@ -1524,13 +1554,30 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
                         <button onClick={() => setEditingListing(l)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 12 }}>
                           {lang === "am" ? "አርትዕ" : "Edit"}
                         </button>
-                        <button onClick={() => onUpdateListing?.(l.id, { rented: !l.rented })}
-                          style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger }}>
-                          {l.rented ? (lang === "am" ? "እንደገና አስገኝ" : "Mark available") : (lang === "am" ? "ተከራይቷል ብለው ምልክት ያድርጉ" : "Mark rented")}
+                        <button
+                          disabled={togglingId === l.id}
+                          onClick={async () => {
+                            setToggleError(null);
+                            setTogglingId(l.id);
+                            const ok = await onUpdateListing?.(l.id, { rented: !l.rented });
+                            setTogglingId(null);
+                            if (!ok) setToggleError(l.id);
+                          }}
+                          style={{ ...btnGhost, padding: "5px 10px", fontSize: 12, borderColor: T.danger, color: T.danger, opacity: togglingId === l.id ? 0.6 : 1 }}>
+                          {togglingId === l.id
+                            ? "…"
+                            : l.rented
+                              ? (lang === "am" ? "እንደገና አስገኝ" : "Mark available")
+                              : (lang === "am" ? "ተከራይቷል ብለው ምልክት ያድርጉ" : "Mark rented")}
                         </button>
                       </span>
                     )}
                   </div>
+                  {toggleError === l.id && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: T.danger }}>
+                      {lang === "am" ? "ማዘመን አልተቻለም — እንደገና ይሞክሩ።" : "Couldn't update — try again in a moment."}
+                    </div>
+                  )}
                   {isBroker && (
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${T.line}`, fontSize: 12, color: "#8A6410" }}>
                       Commission on deal: <strong>1 month's rent — {fmtETB(l.price)}</strong>
