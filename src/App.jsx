@@ -1355,7 +1355,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
   return body;
 }
 
-function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
+function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
   const [titleField, setTitleField] = useState(listing.title || "");
   const [rent, setRent] = useState(String(listing.price ?? ""));
   const [description, setDescription] = useState(listing.description || "");
@@ -1417,6 +1417,11 @@ function EditListingModal({ listing, onSave, onClose, lang = "en" }) {
       phone: contactPhone.trim(),
       features: feat,
       photos: photos.map((p) => p.url).filter(Boolean),
+      // Editing is already restricted to the real owner (server-checked),
+      // so it's safe to refresh this from whoever's editing right now —
+      // this is also how an old listing from before this field existed
+      // gets repaired, without needing to delete and repost it.
+      telegramUsername: account?.username || listing.telegramUsername || null,
     });
     setSaving(false);
     if (ok) onClose();
@@ -1683,6 +1688,7 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
       {editingListing && (
         <EditListingModal
           listing={editingListing}
+          account={account}
           lang={lang}
           onClose={() => setEditingListing(null)}
           onSave={(updates) => onUpdateListing?.(editingListing.id, updates)}
