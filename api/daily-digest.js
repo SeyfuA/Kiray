@@ -173,11 +173,11 @@ function formatListing(l) {
   // Telegram rejects "tel:" links as inline-button URLs outright (confirmed
   // directly against the live API), so the number goes in the message text
   // instead — Telegram auto-detects and makes phone numbers tappable there.
-  // Same trick doesn't work for the handle — plain "@username" text is NOT
-  // auto-linked by Telegram's Bot API (confirmed), so it's a real HTML
-  // <a> link instead.
+  // The Telegram handle doesn't get that treatment two different ways in a
+  // row, now confirmed (plain "@username" isn't auto-linked, and an HTML
+  // <a> tag around it didn't render as tappable either) — it's a real
+  // inline keyboard button below instead, in listingButtons().
   lines.push(`📞 Call · ደውል: ${l.phone}`);
-  if (l.telegramUsername) lines.push(`💬 Telegram: <a href="https://t.me/${l.telegramUsername}">@${l.telegramUsername}</a>`);
   if (l.sample) lines.push("🧪 Sample listing · የማሳያ ማስታወቂያ");
   return lines.join("\n");
 }
@@ -193,8 +193,12 @@ function listingButtons(l) {
   const rows = [];
   const ml = miniAppLink(`listing_${l.id}`);
   if (ml) rows.push([{ text: "🌍 Open in app · መተግበሪያ ክፈት", url: ml }]);
-  const bl = botLink(`listing_${l.id}`);
-  if (bl) rows.push([{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]);
+  if (l.telegramUsername) {
+    rows.push([{ text: `💬 Chat with ${l.name.split(" ")[0]} on Telegram`, url: `https://t.me/${l.telegramUsername}` }]);
+  } else {
+    const bl = botLink(`listing_${l.id}`);
+    if (bl) rows.push([{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]);
+  }
   return rows.length ? { inline_keyboard: rows } : undefined;
 }
 

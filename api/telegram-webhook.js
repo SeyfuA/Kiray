@@ -428,21 +428,24 @@ async function sendContactCard(chatId, lang, listing) {
   // just a formatting issue). Phone numbers in plain message text are
   // auto-detected and tappable-to-dial on Telegram's own clients instead,
   // so the number goes in the text rather than a button. The Telegram
-  // handle does NOT get the same free auto-linking — plain "@username"
-  // text stays inert (confirmed against real behaviour, not just docs) —
-  // so it's wrapped as a real HTML <a> link instead, which Telegram does
-  // render as tappable.
-  // No venue pin or "View in app" button here — both already appeared
-  // alongside the listing card itself, one message earlier.
+  // handle doesn't get that same free treatment two different ways in a
+  // row now confirmed: plain "@username" text isn't auto-linked, and even
+  // wrapping it in a real HTML <a> tag didn't render as tappable either.
+  // Rather than keep fighting text parsing, this uses a real inline
+  // keyboard button instead — the same url-button mechanism already
+  // proven reliable elsewhere in this bot for t.me links.
   const lines = [
     s.contact_for(listing.title),
     `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · ${listing.owner}` : ""}`,
     listing.verified ? s.verified : "",
     `${s.call_btn}: ${listing.phone}`,
-    listing.telegramUsername ? `💬 Telegram: <a href="https://t.me/${listing.telegramUsername}">@${listing.telegramUsername}</a>` : "",
   ].filter(Boolean);
 
-  await sendMessage(chatId, lines.join("\n"));
+  const rows = listing.telegramUsername
+    ? [[{ text: `💬 Chat with ${listing.name.split(" ")[0]} on Telegram`, url: `https://t.me/${listing.telegramUsername}` }]]
+    : [];
+
+  await sendMessage(chatId, lines.join("\n"), rows.length ? { reply_markup: { inline_keyboard: rows } } : {});
 }
 
 /* ---------- landlord / broker section ---------- */
