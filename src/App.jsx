@@ -301,10 +301,10 @@ function FitToResults({ points }) {
   return null;
 }
 
-function MapPanel({ results, selected, setSelected, subtitle }) {
+function MapPanel({ results, selected, setSelected, subtitle, sticky = true }) {
   const points = results.map((l) => [l.lat, l.lng]);
   return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", position: "sticky", top: 12 }}>
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", ...(sticky ? { position: "sticky", top: 12 } : {}) }}>
       <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <strong style={{ fontFamily: displayFont, fontSize: 14 }}>Map view</strong>
         <span style={{ fontSize: 11, color: T.mute }}>{subtitle || "OpenStreetMap — pins are approximate"}</span>
@@ -591,16 +591,50 @@ function ChatModal({ thread, listing, me, onSend, onClose, lang = "en" }) {
   );
 }
 
+/* Custom line icons for the role picker — plain emoji tend to read as an
+   obvious placeholder; these are simple, on-brand shapes instead. */
+function RoleIcon({ type }) {
+  const box = { width: 34, height: 34, viewBox: "0 0 24 24", fill: "none" };
+  if (type === "tenant") {
+    return (
+      <svg {...box}>
+        <circle cx="8" cy="12" r="4.3" stroke={T.forest} strokeWidth="1.8" />
+        <line x1="11.8" y1="12" x2="20" y2="12" stroke={T.forest} strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="16.5" y1="12" x2="16.5" y2="15" stroke={T.forest} strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="19.3" y1="12" x2="19.3" y2="14.3" stroke={T.forest} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (type === "landlord") {
+    return (
+      <svg {...box}>
+        <path d="M4 12 L12 5 L20 12" stroke={T.gold} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6.3 10.8 V19 H17.7 V10.8" stroke={T.forest} strokeWidth="1.8" strokeLinejoin="round" />
+        <rect x="10.2" y="13.6" width="3.6" height="5.4" stroke={T.forest} strokeWidth="1.6" />
+      </svg>
+    );
+  }
+  // broker: two people, connected — represents linking two parties
+  return (
+    <svg {...box}>
+      <circle cx="7" cy="7.5" r="3" stroke={T.forest} strokeWidth="1.8" />
+      <path d="M2.5 19 C2.5 14.8 11.5 14.8 11.5 19" stroke={T.forest} strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="17" cy="7.5" r="3" stroke={T.gold} strokeWidth="1.8" />
+      <path d="M12.5 19 C12.5 14.8 21.5 14.8 21.5 19" stroke={T.gold} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /* ================= ROLE SELECTION (first screen) ================= */
 function RoleGate({ onPick, lang, setLang }) {
   const roles = [
-    { key: "tenant", icon: "🔑", en: "I'm looking to rent", am: "ተከራይ",
+    { key: "tenant", en: "I'm looking to rent", am: "ተከራይ",
       desc_en: "Search homes and business spaces by region, city, and neighbourhood. Save favourites and contact listers.",
       desc_am: "በክልል፣ በከተማ እና በሰፈር የመኖሪያ እና የንግድ ቦታዎችን ይፈልጉ። የወደዷቸውን ያስቀምጡ እና ከአከራዮች ጋር ይገናኙ።" },
-    { key: "landlord", icon: "🏠", en: "I own property", am: "አከራይ / ባለቤት",
+    { key: "landlord", en: "I own property", am: "አከራይ / ባለቤት",
       desc_en: "List your houses or commercial spaces, manage inquiries, and rent directly — no middleman needed.",
       desc_am: "ቤቶችዎን ወይም የንግድ ቦታዎችዎን ያስመዝግቡ፣ ጥያቄዎችን ያስተዳድሩ፣ በቀጥታ ያከራዩ — ደላላ ሳያስፈልግ።" },
-    { key: "broker", icon: "🤝", en: "I'm a broker / intermediary", am: "ደላላ / አገናኝ",
+    { key: "broker", en: "I'm a broker / intermediary", am: "ደላላ / አገናኝ",
       desc_en: "Manage a portfolio for multiple owners, track inquiries and commissions, and build a verified reputation.",
       desc_am: "ለብዙ ባለቤቶች ንብረቶችን ያስተዳድሩ፣ ጥያቄዎችን እና ኮሚሽኖችን ይከታተሉ፣ የተረጋገጠ ስም ይገንቡ።" },
   ];
@@ -633,7 +667,7 @@ function RoleGate({ onPick, lang, setLang }) {
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
           >
-            <div style={{ fontSize: 34, marginBottom: 10 }}>{r.icon}</div>
+            <div style={{ marginBottom: 10 }}><RoleIcon type={r.key} /></div>
             <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 17, color: T.ink }}>{r.en}</div>
             <div style={{ color: T.leaf, fontWeight: 600, fontSize: 14, margin: "2px 0 10px" }}>{r.am}</div>
             <div style={{ fontSize: 13, color: T.mute, lineHeight: 1.5 }}>{lang === "am" ? r.desc_am : r.desc_en}</div>
@@ -712,10 +746,10 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
         <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
         <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
       </div>
-      <span style={{ fontSize: 11.5, background: "rgba(255,255,255,.14)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
+      <span style={{ fontSize: 13, background: "rgba(255,255,255,.14)", padding: "5px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
         {roleLabel}
       </span>
-      <span style={{ fontSize: 11.5, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <span style={{ fontSize: 13, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
         {account?.photo
           ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
           : "👤"}{" "}
@@ -724,18 +758,18 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
       <nav style={{ display: "flex", gap: 6, marginLeft: 8, flexWrap: "wrap" }}>
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            padding: "8px 15px", borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: "pointer",
             border: "1px solid rgba(255,255,255,.3)",
             background: tab === t.key ? "#fff" : "transparent",
             color: tab === t.key ? T.forest : "#fff",
           }}>{t.label}</button>
         ))}
       </nav>
-      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ marginLeft: "auto", padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
-        {u.lang_toggle}
-      </button>
-      <button onClick={onSwitchRole} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+      <button onClick={onSwitchRole} style={{ marginLeft: "auto", padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
         {u.switchRole}
+      </button>
+      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+        {u.lang_toggle}
       </button>
     </header>
   );
@@ -1250,17 +1284,18 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
           )}
         </div>
         {cityObj && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 10, borderTop: `1px dashed ${T.line}` }}>
+          <div style={{ paddingTop: 10, borderTop: `1px dashed ${T.line}` }}>
             {/* Owners/brokers can type any neighbourhood name when posting (not
                 limited to a fixed list), so the filter options here are the
                 predefined list PLUS whatever custom names actually show up in
                 current listings for this city — otherwise a freshly-typed
                 neighbourhood would have no way to be found by tenants. */}
-            {[...new Set([...cityObj.hoods, ...listings.filter((l) => l.city === city).map((l) => l.hood).filter(Boolean)])]
-              .sort((a, b) => a.localeCompare(b))
-              .map((h) => (
-                <Chip key={h} small active={hood === h} onClick={() => { setHood(h === hood ? null : h); setSelected(null); }}>{h}</Chip>
-              ))}
+            <select value={hood || ""} onChange={(e) => { setHood(e.target.value || null); setSelected(null); }} style={inputStyle}>
+              <option value="">{u.neighbourhood}</option>
+              {[...new Set([...cityObj.hoods, ...listings.filter((l) => l.city === city).map((l) => l.hood).filter(Boolean)])]
+                .sort((a, b) => a.localeCompare(b))
+                .map((h) => <option key={h} value={h}>{h}</option>)}
+            </select>
           </div>
         )}
       </section>
@@ -1284,7 +1319,8 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
         </span>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1.1fr) minmax(300px, 1fr)", gap: 18, alignItems: "start" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} />
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
@@ -1296,7 +1332,6 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
               saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode lang={lang} />
           ))}
         </section>
-        <MapPanel results={results} selected={selected} setSelected={setSelected} />
       </div>
     </div>
   );
