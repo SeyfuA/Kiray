@@ -853,7 +853,12 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
             <div style={{ fontSize: 12, color: T.mute, marginTop: 2 }}>
               Posted on {fullDate(l.posted)}
               {l.phone && <> · 📱 {fmtPhone(l.phone)}</>}
-              {l.telegramUsername && <> · 💬 @{l.telegramUsername}</>}
+              {l.telegramUsername && (
+                <> · 💬 <span
+                  onClick={(e) => { e.stopPropagation(); openPersonTelegram(l.telegramUsername); }}
+                  style={{ color: T.forest, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                >@{l.telegramUsername}</span></>
+              )}
             </div>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
