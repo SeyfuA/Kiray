@@ -427,7 +427,9 @@ async function sendContactCard(chatId, lang, listing) {
   // platform restriction, confirmed directly against the live API — not
   // just a formatting issue). Phone numbers in plain message text are
   // auto-detected and tappable-to-dial on Telegram's own clients instead,
-  // so the number goes in the text rather than a button.
+  // so the number goes in the text rather than a button. Same trick works
+  // for the Telegram handle: writing "@username" as plain text is
+  // auto-linked and tappable by Telegram itself — no button needed.
   // No venue pin or "View in app" button here — both already appeared
   // alongside the listing card itself, one message earlier.
   const lines = [
@@ -435,6 +437,7 @@ async function sendContactCard(chatId, lang, listing) {
     `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · ${listing.owner}` : ""}`,
     listing.verified ? s.verified : "",
     `${s.call_btn}: ${listing.phone}`,
+    listing.telegramUsername ? `💬 Telegram: @${listing.telegramUsername}` : "",
   ].filter(Boolean);
 
   await sendMessage(chatId, lines.join("\n"));
