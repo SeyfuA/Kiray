@@ -173,9 +173,11 @@ function formatListing(l) {
   // Telegram rejects "tel:" links as inline-button URLs outright (confirmed
   // directly against the live API), so the number goes in the message text
   // instead — Telegram auto-detects and makes phone numbers tappable there.
-  // Same trick for the handle: plain "@username" text is auto-linked too.
+  // Same trick doesn't work for the handle — plain "@username" text is NOT
+  // auto-linked by Telegram's Bot API (confirmed), so it's a real HTML
+  // <a> link instead.
   lines.push(`📞 Call · ደውል: ${l.phone}`);
-  if (l.telegramUsername) lines.push(`💬 Telegram: @${l.telegramUsername}`);
+  if (l.telegramUsername) lines.push(`💬 Telegram: <a href="https://t.me/${l.telegramUsername}">@${l.telegramUsername}</a>`);
   if (l.sample) lines.push("🧪 Sample listing · የማሳያ ማስታወቂያ");
   return lines.join("\n");
 }
