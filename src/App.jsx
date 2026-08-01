@@ -24,7 +24,7 @@ const UI = {
     postForm_title: "Post a listing", postForm_submit: "Submit listing",
     my_listings_empty: "No properties yet — post your first listing.",
     inquiries_empty: "No inquiries yet. They'll show up here as soon as a tenant messages you.",
-    where: "Where?", clearLocation: "Clear location", maxRent: "Max rent",
+    where: "Where?", clearLocation: "Clear location", minRent: "Min rent", maxRent: "Max rent",
     saved_title: "Saved listings", saved_subtitle: "You'll get a notification if a saved listing's price changes or it's rented out.",
     saved_empty: "Nothing saved yet — tap the heart on any listing.",
     inquiries_title: "Tenant inquiries", inquiries_subtitle: "Reply fast — listings that respond within 2 hours rank higher in tenant search.",
@@ -72,7 +72,7 @@ const UI = {
     postForm_title: "ማስታወቂያ ለጥፍ", postForm_submit: "ማስታወቂያ አስገባ",
     my_listings_empty: "እስካሁን ምንም ንብረት የለም — የመጀመሪያ ማስታወቂያዎን ይለጥፉ።",
     inquiries_empty: "እስካሁን ምንም ጥያቄ የለም። ተከራይ መልእክት እንደላከ እዚህ ይታያል።",
-    where: "የት?", clearLocation: "አካባቢ አጽዳ", maxRent: "ከፍተኛ ኪራይ",
+    where: "የት?", clearLocation: "አካባቢ አጽዳ", minRent: "ዝቅተኛ ኪራይ", maxRent: "ከፍተኛ ኪራይ",
     saved_title: "የተቀመጡ ማስታወቂያዎች", saved_subtitle: "የተቀመጠ ማስታወቂያ ዋጋ ቢቀየር ወይም ቢከራይ ማሳወቂያ ይደርስዎታል።",
     saved_empty: "እስካሁን ምንም አልተቀመጠም — በማንኛውም ማስታወቂያ ላይ ልብን ይንኩ።",
     inquiries_title: "የተከራይ ጥያቄዎች", inquiries_subtitle: "በፍጥነት ይመልሱ — በ2 ሰዓት ውስጥ የሚመልሱ ማስታወቂያዎች በተከራይ ፍለጋ ላይ ከፍ ብለው ይታያሉ።",
@@ -218,9 +218,13 @@ const DEMO = { landlord: "W/ro Almaz", broker: "Meskerem B." };
 
 /* Options for the posting form */
 const PROPERTY_KINDS = {
-  Residential: ["Room in shared compound", "Condominium", "Apartment", "Studio", "Villa / private house", "Other"],
+  Residential: ["Room in shared compound", "Condominium", "Apartment", "Villa / private house", "Other"],
   Business: ["Shop", "Office", "Warehouse", "Café / restaurant", "Guesthouse", "Other"],
 };
+// Flattened, deduped list of every kind — used for the tenant-side filter,
+// which browses by specific kind of property rather than the broader
+// Residential/Business category.
+const ALL_KINDS = [...new Set([...PROPERTY_KINDS.Residential, ...PROPERTY_KINDS.Business])];
 const FEATURE_OPTIONS = ["Ceramic floor", "Cement floor", "Private bathroom", "Shared bathroom", "Private kitchen", "Water tank", "Own electric meter", "Furnished", "Parking", "Guarded compound", "Balcony", "Backup generator"];
 
 /* ================= SEED CHAT THREADS =================
@@ -1214,7 +1218,8 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
   const [region, setRegion] = useState(null);
   const [city, setCity] = useState(null);
   const [hood, setHood] = useState(null);
-  const [ptype, setPtype] = useState("All");
+  const [kindFilter, setKindFilter] = useState("All");
+  const [minPrice, setMinPrice] = useState(100);
   const [maxPrice, setMaxPrice] = useState(150000);
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState([1, 8]);
@@ -1236,10 +1241,10 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       (!region || l.region === region) &&
       (!city || l.city === city) &&
       (!hood || l.hood === hood) &&
-      (ptype === "All" || l.type === ptype) &&
-      l.price <= maxPrice
+      (kindFilter === "All" || l.kind === kindFilter) &&
+      l.price >= minPrice && l.price <= maxPrice
     ).sort((a, b) => new Date(b.posted) - new Date(a.posted)),
-    [region, city, hood, ptype, maxPrice, listings]);
+    [region, city, hood, kindFilter, minPrice, maxPrice, listings]);
 
   const toggleSave = (id) => setSaved((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const clearFrom = (level) => {
@@ -1300,18 +1305,24 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
         )}
       </section>
 
-      {/* Type + price */}
+      {/* Kind + price */}
       <section style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {["All", "Residential", "Business"].map((t) => (
-            <Chip key={t} active={ptype === t} onClick={() => setPtype(t)}>
-              {t === "Residential" ? "Residential · መኖሪያ" : t === "Business" ? "Business · ንግድ" : "All"}
-            </Chip>
-          ))}
+        <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 170 }}>
+          <option value="All">{u.allTypes}</option>
+          {ALL_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+          <span style={{ color: T.mute }}>{u.minRent}</span>
+          <input type="range" min={100} max={1000000} step={100} value={minPrice}
+            onChange={(e) => { const v = Number(e.target.value); setMinPrice(v); if (v > maxPrice) setMaxPrice(v); }}
+            style={{ accentColor: T.forest }} />
+          <strong>{fmtETB(minPrice)}/mo</strong>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ color: T.mute }}>{u.maxRent}</span>
-          <input type="range" min={100} max={1000000} step={100} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} style={{ accentColor: T.forest }} />
+          <input type="range" min={100} max={1000000} step={100} value={maxPrice}
+            onChange={(e) => { const v = Number(e.target.value); setMaxPrice(v); if (v < minPrice) setMinPrice(v); }}
+            style={{ accentColor: T.forest }} />
           <strong>{fmtETB(maxPrice)}/mo</strong>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 13, color: T.mute }}>
