@@ -712,7 +712,8 @@ function useTelegramProfile(setAccount) {
         return;
       }
       tg.ready();
-      tg.expand();
+      tg.expand(); // works on mobile; documented as a no-op on Desktop, which opens in a fixed medium window regardless
+      tg.requestFullscreen?.(); // the actual fix for Desktop's small window — newer API, so optional-chained for older clients that don't have it yet
       fetch("/api/telegram-webapp-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
