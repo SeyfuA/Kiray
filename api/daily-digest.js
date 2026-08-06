@@ -7,23 +7,27 @@
    2. Add this bot as an ADMIN of that channel with "Post Messages" allowed
       (Channel -> channel name -> Administrators -> Add Admin -> your bot).
       This step can't be done from code — it's a Telegram app action.
-   3. (Optional but recommended) Register a Telegram "Direct Link Mini App"
-      so channel posts can open the real app WITH the visitor's profile —
-      message @BotFather -> /newapp -> pick this bot -> give it a name,
-      description, and 640x360 photo (GIF step: send /empty) -> when asked
-      for the Web App URL, use the same URL as KIRAY_APP_URL -> choose a
-      short name (e.g. "app"). Skipping this step is fine — those specific
-      buttons are just omitted and the bot-chat link still works.
+   3. Register a Telegram "Direct Link Mini App" so channel posts can open
+      the real app WITH the visitor's profile — message @BotFather ->
+      /newapp -> pick this bot -> give it a name, description, and 640x360
+      photo (GIF step: send /empty) -> when asked for the Web App URL, use
+      the same URL as KIRAY_APP_URL -> choose a short name (e.g. "app").
+      Without this step, listings post with NO button at all (the channel
+      deliberately only ever links to the app, never to a bot chat — see
+      the note by listingButtons() below) — the phone number in the text
+      is still there either way.
    4. Add four environment variables on Vercel:
         KIRAY_CHANNEL_ID   — the channel's @username (public channels — easiest),
                              or its numeric id like -1001234567890 (private
                              channels; see README-TELEGRAM.md for how to find it)
         KIRAY_BOT_USERNAME — the bot's @username, WITHOUT the @
-                             (e.g. EthioKirayBot) — powers the "Chat via bot"
-                             links; without it those buttons are just omitted
+                             (e.g. EthioKirayBot) — this is part of the
+                             "Open in app" link's URL (t.me/<bot>/<app>),
+                             not a separate bot-chat feature
         KIRAY_MINIAPP_SHORTNAME — the short name chosen in step 3 (e.g. "app")
-                             — powers the "Open in app" links; without it
-                             those buttons are just omitted
+                             — also needed for the "Open in app" link;
+                             without either of these two, that button is
+                             just omitted
         CRON_SECRET        — any random string, 16+ characters
    5. Deploy. Vercel reads vercel.json and registers the daily schedule
       automatically — nothing else to run or trigger by hand.
@@ -62,14 +66,6 @@ const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
 const BOT_USERNAME = process.env.KIRAY_BOT_USERNAME; // e.g. "EthioKirayBot", no "@"
 const MINIAPP_SHORTNAME = process.env.KIRAY_MINIAPP_SHORTNAME; // set via BotFather /newapp — see below
 
-// Deep-links into a private chat with the bot. Telegram opens the chat and
-// sends "/start <payload>" as the first message — the webhook reads that
-// payload to jump straight to the listing instead of a generic menu.
-function botLink(payload) {
-  if (!BOT_USERNAME) return null;
-  return `https://t.me/${BOT_USERNAME}${payload ? `?start=${payload}` : ""}`;
-}
-
 // Telegram "Direct Link Mini Apps": a plain t.me/<bot>/<shortname> URL that
 // Telegram recognizes and opens as the genuine Mini App — WITH real profile
 // access — even though it's just a normal "url" button. This is different
@@ -78,8 +74,9 @@ function botLink(payload) {
 // One-time setup: message @BotFather -> /newapp -> pick this bot -> give it
 // a name/description/photo -> when asked for the Web App URL, use the same
 // URL as KIRAY_APP_URL -> choose a short name (e.g. "app") and set it here
-// as KIRAY_MINIAPP_SHORTNAME. Direct Links can't read/send chat messages
-// (a Telegram platform limit) — that's still what the bot chat is for.
+// as KIRAY_MINIAPP_SHORTNAME. The channel deliberately only ever links to
+// the app now, not to a bot chat — chatting with the actual poster happens
+// from inside the app itself, via their real Telegram handle when known.
 function miniAppLink(payload) {
   if (!BOT_USERNAME || !MINIAPP_SHORTNAME) return null;
   return `https://t.me/${BOT_USERNAME}/${MINIAPP_SHORTNAME}${payload ? `?startapp=${payload}` : ""}`;
@@ -190,16 +187,8 @@ function formatListing(l) {
 // the real Mini App and Contact & chat features do work. The phone number
 // is already in the message text above for anyone who'd rather just call.
 function listingButtons(l) {
-  const rows = [];
   const ml = miniAppLink(`listing_${l.id}`);
-  if (ml) rows.push([{ text: "🌍 Open in app · መተግበሪያ ክፈት", url: ml }]);
-  if (l.telegramUsername) {
-    rows.push([{ text: `💬 Chat with ${l.name.split(" ")[0]} on Telegram`, url: `https://t.me/${l.telegramUsername}` }]);
-  } else {
-    const bl = botLink(`listing_${l.id}`);
-    if (bl) rows.push([{ text: "💬 Chat on Telegram · በቴሌግራም ይወያዩ", url: bl }]);
-  }
-  return rows.length ? { inline_keyboard: rows } : undefined;
+  return ml ? { inline_keyboard: [[{ text: "🌍 Open in app · መተግበሪያ ክፈት", url: ml }]] } : undefined;
 }
 
 /* ---------- entry point ---------- */
@@ -239,16 +228,12 @@ export default async function handler(req, res) {
     await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
-  const footerRows = [];
   const fullMiniAppLink = miniAppLink();
-  if (fullMiniAppLink) footerRows.push([{ text: "🌍 Open Ethio Kiray app", url: fullMiniAppLink }]);
-  const fullBotLink = botLink();
-  if (fullBotLink) footerRows.push([{ text: "💬 Open Ethio Kiray bot", url: fullBotLink }]);
-  if (footerRows.length) {
+  if (fullMiniAppLink) {
     await sendMessage(
       CHANNEL_ID,
-      "Browse more listings by region, right here in Telegram 👇\nበቴሌግራም ውስጥ ተጨማሪ ማስታወቂያዎችን በክልል ይመልከቱ 👇",
-      { reply_markup: { inline_keyboard: footerRows } },
+      "Browse the full listings and map, right in the app 👇\nሙሉ ማስታወቂያዎችን እና ካርታውን በመተግበሪያው ይመልከቱ 👇",
+      { reply_markup: { inline_keyboard: [[{ text: "🌍 Open Ethio Kiray app", url: fullMiniAppLink }]] } },
       "footer"
     );
   }

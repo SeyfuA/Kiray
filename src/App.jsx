@@ -437,23 +437,11 @@ function resizeImage(file, maxDim = 1600, quality = 0.82) {
   });
 }
 
-function openTelegramChat(listingId) {
-  const username = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
-  if (!username) return;
-  const url = `https://t.me/${username}?start=listing_${listingId}`;
-  // Telegram's own tg.openTelegramLink() JS method turned out to be
-  // unreliable on some platforms (confirmed: worked on desktop browsers,
-  // silently did nothing from inside the mobile app). A plain navigation
-  // doesn't have that problem — Telegram's WebView already intercepts and
-  // handles t.me links natively, on every platform, without needing the
-  // special API call at all.
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 // Opens a direct chat with the actual person who posted the listing —
 // only possible when they signed in via Telegram AND have a public
-// username set (some Telegram accounts don't). Falls back to
-// openTelegramChat() above (the bot) when there's no real username to link to.
+// username set (some Telegram accounts don't). When it's not available,
+// the Chat button simply isn't shown — Call is always there instead,
+// since a phone number is required on every listing. No bot fallback.
 function openPersonTelegram(username) {
   const url = `https://t.me/${username}`;
   window.open(url, "_blank", "noopener,noreferrer");
@@ -864,11 +852,11 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
             <CallButton phone={l.phone} />
-            <button style={btnGhost} onClick={() => (l.telegramUsername ? openPersonTelegram(l.telegramUsername) : openTelegramChat(l.id))}>
-              {l.telegramUsername
-                ? `💬 Chat with ${l.name.split(" ")[0]} on Telegram`
-                : "💬 Chat on Telegram · በቴሌግራም ይወያዩ"}
-            </button>
+            {l.telegramUsername && (
+              <button style={btnGhost} onClick={() => openPersonTelegram(l.telegramUsername)}>
+                💬 Chat with {l.name.split(" ")[0]} on Telegram
+              </button>
+            )}
           </div>
         </div>
       )}
