@@ -312,7 +312,19 @@ function FitToResults({ points }) {
 function MapPanel({ results, selected, setSelected, subtitle, sticky = true, height = 320, width = "100%" }) {
   const points = results.map((l) => [l.lat, l.lng]);
   return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", width, margin: width === "100%" ? undefined : "0 auto", ...(sticky ? { position: "sticky", top: 12 } : {}) }}>
+    <section style={{
+      background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", width,
+      margin: width === "100%" ? undefined : "0 auto",
+      // Leaflet's own internal panes/controls use z-index values up to 800
+      // (its own CSS, not ours). Without an explicit `position` here,
+      // this section never properly establishes its own stacking context,
+      // and those high internal z-indices can escape and render above
+      // page overlays that have a much lower z-index than 800 — which is
+      // exactly what a modal like PhotoGallery or EditListingModal is.
+      // `position: relative` + the overflow:hidden above together contain
+      // Leaflet's stacking within this box, whether the map is sticky or not.
+      position: sticky ? "sticky" : "relative", top: sticky ? 12 : undefined, zIndex: 1,
+    }}>
       <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <strong style={{ fontFamily: displayFont, fontSize: 14 }}>Map view</strong>
         <span style={{ fontSize: 11, color: T.mute }}>{subtitle || "OpenStreetMap — pins are approximate"}</span>
@@ -469,7 +481,7 @@ function PhotoGallery({ photos, title, onClose }) {
   const prev = (e) => { e.stopPropagation(); setI((n) => (n - 1 + photos.length) % photos.length); };
   const next = (e) => { e.stopPropagation(); setI((n) => (n + 1) % photos.length); };
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.86)", zIndex: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.86)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <button onClick={onClose} style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#fff", fontSize: 26, cursor: "pointer", lineHeight: 1 }}>✕</button>
       <div style={{ color: "#fff", fontSize: 13, marginBottom: 10, opacity: 0.85 }}>{title} · {i + 1} / {photos.length}</div>
       <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "92vw", maxHeight: "78vh", display: "flex", alignItems: "center", gap: 10 }}>
@@ -1431,7 +1443,7 @@ function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h2 style={{ margin: 0, fontFamily: displayFont, fontSize: 19 }}>{lang === "am" ? "ማስታወቂያ አርትዕ" : "Edit listing"}</h2>
