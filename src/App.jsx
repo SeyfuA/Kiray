@@ -1325,7 +1325,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} height={260} width="70%" />
+        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} height={200} width="100%" />
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
