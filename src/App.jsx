@@ -496,7 +496,7 @@ function PhotoGallery({ photos, title, onClose }) {
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         aria-label="Close"
         style={{
-          position: "absolute", top: 14, right: 14, zIndex: 20,
+          position: "absolute", top: "calc(14px + env(safe-area-inset-top, 0px))", right: 14, zIndex: 20,
           width: 44, height: 44, borderRadius: "50%",
           background: "rgba(0,0,0,.6)", border: "1.5px solid rgba(255,255,255,.4)",
           color: "#fff", fontSize: 20, cursor: "pointer", lineHeight: 1,
@@ -504,7 +504,7 @@ function PhotoGallery({ photos, title, onClose }) {
         }}
       >✕</button>
 
-      <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 15, color: "#fff", fontSize: 12.5, background: "rgba(0,0,0,.55)", padding: "5px 13px", borderRadius: 999, whiteSpace: "nowrap" }}>
+      <div style={{ position: "absolute", top: "calc(20px + env(safe-area-inset-top, 0px))", left: "50%", transform: "translateX(-50%)", zIndex: 15, color: "#fff", fontSize: 12.5, background: "rgba(0,0,0,.55)", padding: "5px 13px", borderRadius: 999, whiteSpace: "nowrap" }}>
         {title} · {i + 1} / {photos.length}
       </div>
 
