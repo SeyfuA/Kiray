@@ -305,15 +305,15 @@ function FitToResults({ points }) {
   return null;
 }
 
-function MapPanel({ results, selected, setSelected, subtitle, sticky = true }) {
+function MapPanel({ results, selected, setSelected, subtitle, sticky = true, height = 320, width = "100%" }) {
   const points = results.map((l) => [l.lat, l.lng]);
   return (
-    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", ...(sticky ? { position: "sticky", top: 12 } : {}) }}>
+    <section style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", width, margin: width === "100%" ? undefined : "0 auto", ...(sticky ? { position: "sticky", top: 12 } : {}) }}>
       <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <strong style={{ fontFamily: displayFont, fontSize: 14 }}>Map view</strong>
         <span style={{ fontSize: 11, color: T.mute }}>{subtitle || "OpenStreetMap — pins are approximate"}</span>
       </div>
-      <MapContainer center={[9.02, 38.75]} zoom={6} scrollWheelZoom={true} style={{ height: 460, width: "100%" }}>
+      <MapContainer center={[9.02, 38.75]} zoom={6} scrollWheelZoom={true} style={{ height, width: "100%" }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -1325,7 +1325,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} />
+        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} height={260} width="70%" />
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
