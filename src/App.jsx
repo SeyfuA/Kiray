@@ -481,22 +481,44 @@ function PhotoGallery({ photos, title, onClose }) {
   const prev = (e) => { e.stopPropagation(); setI((n) => (n - 1 + photos.length) % photos.length); };
   const next = (e) => { e.stopPropagation(); setI((n) => (n + 1) % photos.length); };
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(11,20,16,.86)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <button onClick={onClose} style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#fff", fontSize: 26, cursor: "pointer", lineHeight: 1 }}>✕</button>
-      <div style={{ color: "#fff", fontSize: 13, marginBottom: 10, opacity: 0.85 }}>{title} · {i + 1} / {photos.length}</div>
-      <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "92vw", maxHeight: "78vh", display: "flex", alignItems: "center", gap: 10 }}>
-        {photos.length > 1 && (
-          <button onClick={prev} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>‹</button>
-        )}
-        <img src={photos[i]} alt={`${title} photo ${i + 1}`} style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: 10, objectFit: "contain", background: "#000" }} />
-        {photos.length > 1 && (
-          <button onClick={next} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>›</button>
-        )}
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#000", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img
+        src={photos[i]}
+        alt={`${title} photo ${i + 1}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100vw", height: "100vh", objectFit: "contain" }}
+      />
+
+      {/* Close button: fixed position, solid background, its own z-index above
+          the photo and every other control here — always visible and tappable
+          no matter which photo is showing or how many there are. */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        aria-label="Close"
+        style={{
+          position: "absolute", top: 14, right: 14, zIndex: 20,
+          width: 44, height: 44, borderRadius: "50%",
+          background: "rgba(0,0,0,.6)", border: "1.5px solid rgba(255,255,255,.4)",
+          color: "#fff", fontSize: 20, cursor: "pointer", lineHeight: 1,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+      >✕</button>
+
+      <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 15, color: "#fff", fontSize: 12.5, background: "rgba(0,0,0,.55)", padding: "5px 13px", borderRadius: 999, whiteSpace: "nowrap" }}>
+        {title} · {i + 1} / {photos.length}
       </div>
+
       {photos.length > 1 && (
-        <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap", justifyContent: "center", maxWidth: "92vw" }}>
+        <>
+          <button onClick={prev} aria-label="Previous photo" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", zIndex: 15, background: "rgba(0,0,0,.5)", border: "none", color: "#fff", width: 46, height: 46, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>‹</button>
+          <button onClick={next} aria-label="Next photo" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", zIndex: 15, background: "rgba(0,0,0,.5)", border: "none", color: "#fff", width: 46, height: 46, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>›</button>
+        </>
+      )}
+
+      {photos.length > 1 && (
+        <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", bottom: 18, left: 0, right: 0, zIndex: 15, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", padding: "0 16px" }}>
           {photos.map((p, idx) => (
-            <img key={idx} src={p} onClick={() => setI(idx)} alt="" style={{ width: 46, height: 34, objectFit: "cover", borderRadius: 5, cursor: "pointer", opacity: idx === i ? 1 : 0.5, border: idx === i ? "2px solid #fff" : "2px solid transparent" }} />
+            <img key={idx} src={p} onClick={() => setI(idx)} alt="" style={{ width: 44, height: 32, objectFit: "cover", borderRadius: 5, cursor: "pointer", opacity: idx === i ? 1 : 0.5, border: idx === i ? "2px solid #fff" : "2px solid transparent" }} />
           ))}
         </div>
       )}
