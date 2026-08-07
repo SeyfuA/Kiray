@@ -493,18 +493,20 @@ function PhotoGallery({ photos, title, onClose }) {
           the photo and every other control here — always visible and tappable
           no matter which photo is showing or how many there are. */}
       <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         aria-label="Close"
         style={{
-          position: "absolute", top: "calc(14px + env(safe-area-inset-top, 0px))", right: 14, zIndex: 20,
-          width: 44, height: 44, borderRadius: "50%",
-          background: "rgba(0,0,0,.6)", border: "1.5px solid rgba(255,255,255,.4)",
-          color: "#fff", fontSize: 20, cursor: "pointer", lineHeight: 1,
+          position: "absolute", top: 58, right: 14, zIndex: 30,
+          width: 50, height: 50, borderRadius: "50%",
+          background: "rgba(0,0,0,.65)", border: "1.5px solid rgba(255,255,255,.5)",
+          color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1,
           display: "flex", alignItems: "center", justifyContent: "center",
+          touchAction: "manipulation",
         }}
       >✕</button>
 
-      <div style={{ position: "absolute", top: "calc(20px + env(safe-area-inset-top, 0px))", left: "50%", transform: "translateX(-50%)", zIndex: 15, color: "#fff", fontSize: 12.5, background: "rgba(0,0,0,.55)", padding: "5px 13px", borderRadius: 999, whiteSpace: "nowrap" }}>
+      <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 15, color: "#fff", fontSize: 12.5, background: "rgba(0,0,0,.55)", padding: "5px 13px", borderRadius: 999, whiteSpace: "nowrap" }}>
         {title} · {i + 1} / {photos.length}
       </div>
 
