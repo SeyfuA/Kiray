@@ -44,7 +44,9 @@ const UI = {
     pf_region: "Region", pf_city: "City / town", pf_neighbourhood: "Sub-city / Area",
     pf_specificArea: "Neighbourhood",
     pf_specificAreaHint: "The specific area, street, or landmark — shown to tenants exactly as you type it.",
-    pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_contactPhone: "Contact phone for this listing",
+    pf_rent: "Monthly rent (ETB)", pf_titleField: "Title", pf_listerName: "Your name",
+    pf_listerNameHint: "Shown to tenants as \"Listed by\" on this property.",
+    pf_contactPhone: "Contact phone for this listing",
     pf_err_noContact: "Add a phone number so tenants have a way to reach you.",
     pf_location: "Property location — set the pin", pf_useLocation: "📍 Use my current location",
     pf_orTapMap: "or tap the map to place the pin, then drag it to adjust",
@@ -92,7 +94,9 @@ const UI = {
     pf_region: "ክልል", pf_city: "ከተማ / ወረዳ", pf_neighbourhood: "ክፍለ ከተማ / አካባቢ",
     pf_specificArea: "ሰፈር",
     pf_specificAreaHint: "የተለየ አካባቢ፣ መንገድ ወይም መለያ ቦታ — ለተከራዮች እርስዎ እንደጻፉት በትክክል ይታያል።",
-    pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ",
+    pf_rent: "ወርሃዊ ኪራይ (ብር)", pf_titleField: "ርዕስ", pf_listerName: "ስምዎ",
+    pf_listerNameHint: "ለተከራዮች በዚህ ንብረት ላይ እንደ \"ያስመዘገበው\" ሆኖ ይታያል።",
+    pf_contactPhone: "ለዚህ ማስታወቂያ የመገናኛ ስልክ",
     pf_err_noContact: "ስልክ ቁጥር ያክሉ፣ ተከራዮች እንዲያገኙዎት።",
     pf_location: "የንብረት አካባቢ — ፒኑን ያስቀምጡ", pf_useLocation: "📍 የአሁኑን አካባቢዬን ተጠቀም",
     pf_orTapMap: "ወይም ካርታውን ነክተው ፒኑን ያስቀምጡ፣ ከዚያም ለማስተካከል ይጎትቱት",
@@ -940,6 +944,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
   const [specificArea, setSpecificArea] = useState(""); // free text — the actual neighbourhood/landmark, typed by the lister
   const [rent, setRent] = useState("");
   const [titleField, setTitleField] = useState("");
+  const [listerName, setListerName] = useState(account?.name || "");
   const [contactPhone, setContactPhone] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
@@ -980,6 +985,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
 
   const submitListing = async () => {
     if (!titleField.trim()) return setFormErr(u.pf_titleField + " is required.");
+    if (!listerName.trim()) return setFormErr(u.pf_listerName + " is required.");
     if (!rent || Number(rent) <= 0) return setFormErr(u.pf_rent + " is required.");
     if (!area || Number(area) <= 0) return setFormErr(u.pf_area + " is required.");
     if (!specificArea.trim()) return setFormErr(u.pf_specificArea + " is required.");
@@ -1011,7 +1017,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       features: feat,
       description: [description.trim(), extraNotes].filter(Boolean).join(" — ") || undefined,
       lister: isBroker ? "Broker" : "Owner",
-      name: account?.name || DEMO[role], // shown to tenants
+      name: listerName.trim(), // shown to tenants — what the poster actually typed, not silently pulled from their Telegram profile
       ownerId: account?.telegramId ?? null, // ties this listing to the real signed-in person, if any
       // Always a real phone number now (required — see the validation
       // above) — never a Telegram handle, which isn't a phone number and
@@ -1165,6 +1171,10 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
       </Field>
       <Field label={u.pf_rent}><input style={inputStyle} type="number" value={rent} onChange={(e) => setRent(e.target.value)} placeholder="e.g. 25000" /></Field>
       <Field label={u.pf_titleField}><input style={inputStyle} value={titleField} onChange={(e) => setTitleField(e.target.value)} placeholder={`e.g. 2-room ${kind.toLowerCase()} in ${cityObj.hoods[0]}, ${citySel}`} /></Field>
+      <Field label={u.pf_listerName}>
+        <input style={inputStyle} value={listerName} onChange={(e) => setListerName(e.target.value)} placeholder="e.g. Abebe Kebede" />
+        <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>{u.pf_listerNameHint}</div>
+      </Field>
       <Field label={u.pf_contactPhone}>
         <input style={inputStyle} inputMode="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+251 9…" />
         <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
@@ -1346,6 +1356,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
 
 function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
   const [titleField, setTitleField] = useState(listing.title || "");
+  const [listerName, setListerName] = useState(listing.name || "");
   const [rent, setRent] = useState(String(listing.price ?? ""));
   const [description, setDescription] = useState(listing.description || "");
   const [contactPhone, setContactPhone] = useState(listing.phone || "");
@@ -1389,6 +1400,7 @@ function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
 
   const save = async () => {
     if (!titleField.trim()) return setErr(lang === "am" ? "ርዕስ ያስፈልጋል።" : "Title is required.");
+    if (!listerName.trim()) return setErr(lang === "am" ? "ስም ያስፈልጋል።" : "Your name is required.");
     if (!rent || Number(rent) <= 0) return setErr(lang === "am" ? "ወርሃዊ ኪራይ ያስፈልጋል።" : "Monthly rent is required.");
     if (!contactPhone.trim()) return setErr(lang === "am" ? "ስልክ ቁጥር ያስፈልጋል።" : "Phone number is required.");
     if (contactPhone.trim().startsWith("@")) return setErr(lang === "am" ? "ይህ የቴሌግራም የተጠቃሚ ስም ይመስላል፣ ስልክ ቁጥር አይደለም። ትክክለኛ ስልክ ቁጥር ያስገቡ።" : "That looks like a Telegram username, not a phone number — enter a real phone number.");
@@ -1401,6 +1413,7 @@ function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
     setSaving(true);
     const ok = await onSave({
       title: titleField.trim(),
+      name: listerName.trim(),
       price: Number(rent),
       description: description.trim() || undefined,
       phone: contactPhone.trim(),
@@ -1426,6 +1439,12 @@ function EditListingModal({ listing, onSave, onClose, account, lang = "en" }) {
         </div>
         <Field label={lang === "am" ? "ርዕስ" : "Title"}>
           <input style={inputStyle} value={titleField} onChange={(e) => setTitleField(e.target.value)} />
+        </Field>
+        <Field label={lang === "am" ? "ስምዎ" : "Your name"}>
+          <input style={inputStyle} value={listerName} onChange={(e) => setListerName(e.target.value)} />
+          <div style={{ fontSize: 11.5, color: T.mute, marginTop: 4, lineHeight: 1.4 }}>
+            {lang === "am" ? "ለተከራዮች እንደ \"ያስመዘገበው\" ሆኖ ይታያል።" : "Shown to tenants as \"Listed by\" on this property."}
+          </div>
         </Field>
         <Field label={lang === "am" ? "ወርሃዊ ኪራይ (ብር)" : "Monthly rent (ETB)"}>
           <input style={inputStyle} type="number" value={rent} onChange={(e) => setRent(e.target.value)} />
