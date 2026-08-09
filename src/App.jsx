@@ -792,8 +792,8 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
     <header style={{ background: T.forest, color: "#fff", padding: "60px 18px 14px" }}>
-      {/* Row 1: brand — role badge, close together */}
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 10 }}>
+      {/* Row 1: brand — role badge at the far right */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
         <div style={{ fontFamily: displayFont, fontSize: 21, fontWeight: 700, letterSpacing: -0.5 }}>
           Ethio Kiray <span style={{ fontSize: 12.5, fontWeight: 400, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
         </div>
@@ -1685,17 +1685,17 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
   } else {
     body = (
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "22px 20px 50px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
           <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: 0 }}>
             {isBroker ? u.nav_listings_broker : u.nav_listings_landlord}
           </h2>
           <span style={{ fontSize: 13, color: T.mute }}>{u.signedInAs} <strong>{me}</strong> <span style={{ color: T.forest }}>{u.verifiedTag}</span></span>
         </div>
-        <p style={{ color: T.mute, fontSize: 13, margin: "0 0 16px" }}>
+        <p style={{ color: T.mute, fontSize: 13, margin: "0 0 18px" }}>
           {isBroker ? u.brokerNote : u.landlordNote}
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 18 }}>
           {[
             { n: mine.length, l: u.stat_active },
             { n: totalViews, l: u.stat_views },
