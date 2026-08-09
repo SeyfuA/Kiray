@@ -792,8 +792,8 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
     <header style={{ background: T.forest, color: "#fff", padding: "60px 18px 14px" }}>
-      {/* Row 1: brand — role badge */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
+      {/* Row 1: brand — role badge, close together */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 10 }}>
         <div style={{ fontFamily: displayFont, fontSize: 21, fontWeight: 700, letterSpacing: -0.5 }}>
           Ethio Kiray <span style={{ fontSize: 12.5, fontWeight: 400, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
         </div>
