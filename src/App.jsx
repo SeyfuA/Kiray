@@ -674,14 +674,14 @@ function RoleGate({ onPick, lang, setLang }) {
     ? { tagline: "በኢትዮጵያ ውስጥ ኪራይ — በሁሉም ከተማ፣ በሁሉም ሰፈር", who: "ማን ነዎት?", cont: "ቀጥል →", footer: "ማንኛውም ጊዜ ከላይ ካለው ባር ሚናዎን መቀየር ይችላሉ።", toggle: "🌐 English" }
     : { tagline: "Rentals across Ethiopia — every capital, every neighbourhood", who: "Who are you?", cont: "Continue →", footer: "You can switch roles anytime from the top bar.", toggle: "🌐 አማርኛ" };
   return (
-    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "100px 20px 40px", fontFamily: bodyFont, position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "135px 20px 40px", fontFamily: bodyFont, position: "relative" }}>
       {/* Telegram's own native header (with its own close/menu icons) sits at
           the very top of the screen and isn't something this app controls —
           both the language toggle and the title need to stay clear of it.
           A plain, generous fixed offset here (not env()/calc()) is the more
           reliable choice — confirmed elsewhere in this app that CSS
           safe-area features aren't consistently honoured in every WebView. */}
-      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ position: "absolute", top: 54, right: 18, padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ position: "absolute", top: 80, right: 18, padding: "7px 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
         {t.toggle}
       </button>
       <div style={{ textAlign: "center", marginBottom: 34, maxWidth: "calc(100vw - 40px)" }}>
