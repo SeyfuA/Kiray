@@ -823,22 +823,20 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
         </button>
       </div>
 
-      {/* Row 3: switch role — remaining tabs */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+      {/* Row 3: switch role — remaining tabs, all evenly spread */}
+      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         <button onClick={onSwitchRole} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 11.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap", flexShrink: 0 }}>
           {u.switchRole}
         </button>
-        <nav style={{ display: "flex", gap: 6, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-          {tabs.slice(1).map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              padding: "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              border: "1px solid rgba(255,255,255,.3)", flexShrink: 0, whiteSpace: "nowrap",
-              background: tab === t.key ? "#fff" : "transparent",
-              color: tab === t.key ? T.forest : "#fff",
-            }}>{t.label}</button>
-          ))}
-        </nav>
-      </div>
+        {tabs.slice(1).map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            border: "1px solid rgba(255,255,255,.3)", flexShrink: 0, whiteSpace: "nowrap",
+            background: tab === t.key ? "#fff" : "transparent",
+            color: tab === t.key ? T.forest : "#fff",
+          }}>{t.label}</button>
+        ))}
+      </nav>
     </header>
   );
 }
