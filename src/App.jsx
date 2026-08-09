@@ -465,10 +465,10 @@ function openPersonTelegram(username) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-function CallButton({ phone, label }) {
+function CallButton({ phone, label, compact }) {
   if (!phone) return null;
   return (
-    <a href={`tel:${phone}`} style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>
+    <a href={`tel:${phone}`} style={{ ...btnPrimary, ...(compact ? { padding: "6px 11px", fontSize: 12 } : {}), textDecoration: "none", display: "inline-block" }}>
       📞 {label || "Call / ደውል"}
     </a>
   );
@@ -907,12 +907,18 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
               )}
             </div>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }} onClick={(e) => e.stopPropagation()}>
-            <CallButton phone={l.phone} />
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+            <CallButton phone={l.phone} compact />
             {l.telegramUsername && (
-              <button style={btnGhost} onClick={() => openPersonTelegram(l.telegramUsername)}>
-                💬 Chat with {l.name.split(" ")[0]} on Telegram
-              </button>
+              <>
+                <strong style={{ fontSize: 11.5, color: T.mute }}>{lang === "am" ? "ወይም" : "OR"}</strong>
+                <button
+                  onClick={() => openPersonTelegram(l.telegramUsername)}
+                  style={{ ...btnPrimary, padding: "6px 11px", fontSize: 12 }}
+                >
+                  💬 Chat with {l.name.split(" ")[0]} on Telegram
+                </button>
+              </>
             )}
           </div>
         </div>
