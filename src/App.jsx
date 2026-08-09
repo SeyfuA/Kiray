@@ -878,7 +878,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
         </span>
       </div>
       {!isSel && (
-        <div style={{ fontSize: 11.5, color: T.forest, marginTop: 8, fontWeight: 600 }}>
+        <div style={{ fontSize: 13.5, color: T.forest, marginTop: 8, fontWeight: 600 }}>
           👆 {UI[lang].tapForDetails}
         </div>
       )}
