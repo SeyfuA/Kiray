@@ -803,7 +803,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
       </div>
 
       {/* Row 2: profile — primary tab — language */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {account?.photo
             ? <img src={account.photo} alt="" style={{ width: 18, height: 18, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)", flexShrink: 0 }} />
@@ -824,7 +824,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
       </div>
 
       {/* Row 3: switch role — remaining tabs */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <button onClick={onSwitchRole} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 11.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap", flexShrink: 0 }}>
           {u.switchRole}
         </button>
