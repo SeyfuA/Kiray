@@ -791,44 +791,43 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
   const u = UI[lang];
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
-    <header style={{ background: T.forest, color: "#fff", padding: "60px 22px 14px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
-          <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, background: "rgba(255,255,255,.14)", padding: "5px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
-            {roleLabel}
-          </span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            {account?.photo
-              ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
-              : "👤"}{" "}
-            {account ? account.name : u.guest}
-          </span>
-        </div>
+    <header style={{ background: T.forest, color: "#fff", padding: "60px 18px 0" }}>
+      <div style={{ fontFamily: displayFont, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, marginBottom: 12 }}>
+        Ethio Kiray <span style={{ fontSize: 13, fontWeight: 400, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {tabs.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              padding: "8px 15px", borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: "pointer",
-              border: "1px solid rgba(255,255,255,.3)",
-              background: tab === t.key ? "#fff" : "transparent",
-              color: tab === t.key ? T.forest : "#fff",
-            }}>{t.label}</button>
-          ))}
-        </nav>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onSwitchRole} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontSize: 12, background: "rgba(255,255,255,.14)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)", whiteSpace: "nowrap" }}>
+          {roleLabel}
+        </span>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {account?.photo
+            ? <img src={account.photo} alt="" style={{ width: 18, height: 18, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)", flexShrink: 0 }} />
+            : "👤"}
+          {account ? account.name : u.guest}
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexShrink: 0 }}>
+          <button onClick={onSwitchRole} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 11.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap" }}>
             {u.switchRole}
           </button>
-          <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+          <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 11.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)", whiteSpace: "nowrap" }}>
             {u.lang_toggle}
           </button>
         </div>
       </div>
+
+      {/* Horizontal scroll instead of wrapping — tabs never break into a
+          messy multi-line stack on a narrow phone, they just scroll. */}
+      <nav style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 12, WebkitOverflowScrolling: "touch" }}>
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: "8px 15px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer",
+            border: "1px solid rgba(255,255,255,.3)", flexShrink: 0, whiteSpace: "nowrap",
+            background: tab === t.key ? "#fff" : "transparent",
+            color: tab === t.key ? T.forest : "#fff",
+          }}>{t.label}</button>
+        ))}
+      </nav>
     </header>
   );
 }
