@@ -1319,14 +1319,19 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
   // zooms out further to take in the wider area; with neither picked, the
   // map just keeps its normal country-wide default.
   const mapFocus = useMemo(() => {
-    if (cityObj) return { point: [cityObj.lat, cityObj.lng], zoom: 12 };
+    // No per-sub-city coordinates exist in the data, so this can't fly to
+    // the sub-city's exact location — but it can and should zoom in
+    // tighter from the city's center once one is picked, so selecting a
+    // sub-city visibly does something instead of landing on the exact
+    // same view a plain city selection already produced.
+    if (cityObj) return { point: [cityObj.lat, cityObj.lng], zoom: hood ? 14 : 12 };
     if (regionObj && regionObj.cities.length > 0) {
       const avgLat = regionObj.cities.reduce((s, c) => s + c.lat, 0) / regionObj.cities.length;
       const avgLng = regionObj.cities.reduce((s, c) => s + c.lng, 0) / regionObj.cities.length;
       return { point: [avgLat, avgLng], zoom: 7 };
     }
     return { point: null, zoom: null };
-  }, [cityObj, regionObj]);
+  }, [cityObj, regionObj, hood]);
 
   const results = useMemo(() =>
     listings.filter((l) =>
