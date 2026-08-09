@@ -58,6 +58,7 @@ const UI = {
     pf_err_photosUploading: "Photos are still uploading — give it a few seconds.",
     pf_err_photosFailed: "A photo failed to upload — remove it (✕) or try adding it again.",
     sampleBadge: "🧪 Sample listing — for demo purposes",
+    tapForDetails: "Tap for details & contact info",
   },
   am: {
     switchRole: "⇄ ሚና ቀይር", guest: "እንግዳ",
@@ -108,6 +109,7 @@ const UI = {
     pf_err_photosUploading: "ፎቶዎች እየተላኩ ነው — ጥቂት ሰከንዶች ይጠብቁ።",
     pf_err_photosFailed: "አንድ ፎቶ መላክ አልተሳካም — ያስወግዱት (✕) ወይም እንደገና ይሞክሩ።",
     sampleBadge: "🧪 የማሳያ ማስታወቂያ",
+    tapForDetails: "ዝርዝርና የመገናኛ መረጃ ለማየት ይንኩ",
   },
 };
 
@@ -875,6 +877,11 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
           )}
         </span>
       </div>
+      {!isSel && (
+        <div style={{ fontSize: 11.5, color: T.forest, marginTop: 8, fontWeight: 600 }}>
+          👆 {UI[lang].tapForDetails}
+        </div>
+      )}
       {isSel && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}`, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {l.features && l.features.length > 0 && (
@@ -1356,11 +1363,14 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       </section>
 
       {/* Kind + price */}
-      <section style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
-        <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 170 }}>
-          <option value="All">{u.allTypes}</option>
-          {ALL_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
-        </select>
+      <section style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 18 }}>
+        <div>
+          <div style={{ fontSize: 12, color: T.mute, marginBottom: 4 }}>{u.propertyType}</div>
+          <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 170 }}>
+            <option value="All">{u.allTypes}</option>
+            {ALL_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ color: T.mute }}>{u.minRent}</span>
           <input type="range" min={100} max={1000000} step={100} value={minPrice}
@@ -1650,8 +1660,8 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(300px, 1.1fr)", gap: 18, alignItems: "start" }}>
-          <MapPanel results={mine} selected={selected} setSelected={setSelected}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <MapPanel results={mine} selected={selected} setSelected={setSelected} sticky={false} height={200} width="100%"
             subtitle={isBroker ? "Your managed portfolio" : "Your properties"} />
           <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {mine.map((l) => {
