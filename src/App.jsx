@@ -297,21 +297,26 @@ const pinIcon = (color, selected) =>
     popupAnchor: [0, -34],
   });
 
-function FitToResults({ points }) {
+function FitToResults({ points, focusPoint, focusZoom }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length === 0) return;
     if (points.length === 1) {
       map.flyTo(points[0], 14, { duration: 0.8 });
-    } else {
+    } else if (points.length > 1) {
       map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 13 });
+    } else if (focusPoint) {
+      // No listings match the current filters, but a region/city/sub-city
+      // is selected — zoom there anyway rather than leaving the map
+      // wherever it happened to be before, which looked disconnected from
+      // what was actually selected.
+      map.flyTo(focusPoint, focusZoom || 11, { duration: 0.8 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(points)]);
+  }, [JSON.stringify(points), focusPoint?.[0], focusPoint?.[1], focusZoom]);
   return null;
 }
 
-function MapPanel({ results, selected, setSelected, subtitle, sticky = true, height = 320, width = "100%" }) {
+function MapPanel({ results, selected, setSelected, subtitle, sticky = true, height = 320, width = "100%", focusPoint, focusZoom }) {
   const points = results.map((l) => [l.lat, l.lng]);
   return (
     <section style={{
@@ -336,7 +341,7 @@ function MapPanel({ results, selected, setSelected, subtitle, sticky = true, hei
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FitToResults points={points} />
+        <FitToResults points={points} focusPoint={focusPoint} focusZoom={focusZoom} />
         {results.map((l) => (
           <Marker
             key={l.id}
@@ -786,36 +791,44 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
   const u = UI[lang];
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
-    <header style={{ background: T.forest, color: "#fff", padding: "60px 22px 12px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
-        <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
+    <header style={{ background: T.forest, color: "#fff", padding: "60px 22px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
+          <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, background: "rgba(255,255,255,.14)", padding: "5px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
+            {roleLabel}
+          </span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {account?.photo
+              ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
+              : "👤"}{" "}
+            {account ? account.name : u.guest}
+          </span>
+        </div>
       </div>
-      <span style={{ fontSize: 13, background: "rgba(255,255,255,.14)", padding: "5px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,.25)" }}>
-        {roleLabel}
-      </span>
-      <span style={{ fontSize: 13, color: "rgba(255,255,255,.85)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-        {account?.photo
-          ? <img src={account.photo} alt="" style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(255,255,255,.4)" }} />
-          : "👤"}{" "}
-        {account ? account.name : u.guest}
-      </span>
-      <nav style={{ display: "flex", gap: 6, marginLeft: 8, flexWrap: "wrap" }}>
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: "8px 15px", borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: "pointer",
-            border: "1px solid rgba(255,255,255,.3)",
-            background: tab === t.key ? "#fff" : "transparent",
-            color: tab === t.key ? T.forest : "#fff",
-          }}>{t.label}</button>
-        ))}
-      </nav>
-      <button onClick={onSwitchRole} style={{ marginLeft: "auto", padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
-        {u.switchRole}
-      </button>
-      <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
-        {u.lang_toggle}
-      </button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {tabs.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              padding: "8px 15px", borderRadius: 8, fontSize: 14.5, fontWeight: 600, cursor: "pointer",
+              border: "1px solid rgba(255,255,255,.3)",
+              background: tab === t.key ? "#fff" : "transparent",
+              color: tab === t.key ? T.forest : "#fff",
+            }}>{t.label}</button>
+          ))}
+        </nav>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onSwitchRole} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+            {u.switchRole}
+          </button>
+          <button onClick={() => setLang(lang === "en" ? "am" : "en")} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "rgba(255,255,255,.85)" }}>
+            {u.lang_toggle}
+          </button>
+        </div>
+      </div>
     </header>
   );
 }
@@ -878,7 +891,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
         </span>
       </div>
       {!isSel && (
-        <div style={{ fontSize: 13.5, color: T.forest, marginTop: 8, fontWeight: 600 }}>
+        <div style={{ fontSize: 15.5, color: T.forest, marginTop: 8, fontWeight: 600 }}>
           👆 {UI[lang].tapForDetails}
         </div>
       )}
@@ -1213,7 +1226,7 @@ function PostForm({ role, onDone, account, lang = "en", onCreateListing }) {
           const c = regionCities.find((x) => x.name === e.target.value);
           setSubcitySel(c?.hoods[0] || "");
         }}>
-          {regionCities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
+          {regionCities.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
         </select>
       </Field>
       <Field label={u.pf_neighbourhood}>
@@ -1298,6 +1311,23 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
   const regionObj = LOCATIONS.find((r) => r.region === region);
   const cityObj = regionObj?.cities.find((c) => c.name === city);
 
+  // Drives the map even when the current filters match zero listings —
+  // otherwise selecting a region/city with nothing posted yet left the map
+  // sitting wherever it happened to be before, disconnected from the
+  // selection. City takes priority (exact coordinates, close zoom); with
+  // only a region picked, this centers on the average of its cities and
+  // zooms out further to take in the wider area; with neither picked, the
+  // map just keeps its normal country-wide default.
+  const mapFocus = useMemo(() => {
+    if (cityObj) return { point: [cityObj.lat, cityObj.lng], zoom: 12 };
+    if (regionObj && regionObj.cities.length > 0) {
+      const avgLat = regionObj.cities.reduce((s, c) => s + c.lat, 0) / regionObj.cities.length;
+      const avgLng = regionObj.cities.reduce((s, c) => s + c.lng, 0) / regionObj.cities.length;
+      return { point: [avgLat, avgLng], zoom: 7 };
+    }
+    return { point: null, zoom: null };
+  }, [cityObj, regionObj]);
+
   const results = useMemo(() =>
     listings.filter((l) =>
       !l.rented &&
@@ -1347,7 +1377,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
           {regionObj && (
             <select value={city || ""} onChange={(e) => { const v = e.target.value || null; clearFrom(2); setCity(v); }} style={inputStyle}>
               <option value="">{u.city}</option>
-              {regionObj.cities.map((c) => <option key={c.name} value={c.name}>{c.name} — {c.tier}</option>)}
+              {regionObj.cities.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
             </select>
           )}
         </div>
@@ -1397,7 +1427,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} height={200} width="100%" />
+        <MapPanel results={results} selected={selected} setSelected={setSelected} sticky={false} height={200} width="100%" focusPoint={mapFocus.point} focusZoom={mapFocus.zoom} />
         <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.length === 0 && (
             <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>
