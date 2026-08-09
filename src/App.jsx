@@ -674,7 +674,7 @@ function RoleGate({ onPick, lang, setLang }) {
     ? { tagline: "በኢትዮጵያ ውስጥ ኪራይ — በሁሉም ከተማ፣ በሁሉም ሰፈር", who: "ማን ነዎት?", cont: "ቀጥል →", footer: "ማንኛውም ጊዜ ከላይ ካለው ባር ሚናዎን መቀየር ይችላሉ።", toggle: "🌐 English" }
     : { tagline: "Rentals across Ethiopia — every capital, every neighbourhood", who: "Who are you?", cont: "Continue →", footer: "You can switch roles anytime from the top bar.", toggle: "🌐 አማርኛ" };
   return (
-    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "135px 20px 40px", fontFamily: bodyFont, position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: T.forest, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "122px 20px 40px", fontFamily: bodyFont, position: "relative" }}>
       {/* Telegram's own native header (with its own close/menu icons) sits at
           the very top of the screen and isn't something this app controls —
           both the language toggle and the title need to stay clear of it.
@@ -705,9 +705,13 @@ function RoleGate({ onPick, lang, setLang }) {
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
           >
-            <div style={{ marginBottom: 10 }}><RoleIcon type={r.key} /></div>
-            <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 17, color: T.ink }}>{r.en}</div>
-            <div style={{ color: T.leaf, fontWeight: 600, fontSize: 14, margin: "2px 0 10px" }}>{r.am}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <RoleIcon type={r.key} />
+              <div>
+                <div style={{ fontFamily: displayFont, fontWeight: 700, fontSize: 17, color: T.ink }}>{r.en}</div>
+                <div style={{ color: T.leaf, fontWeight: 600, fontSize: 14 }}>{r.am}</div>
+              </div>
+            </div>
             <div style={{ fontSize: 13, color: T.mute, lineHeight: 1.5 }}>{lang === "am" ? r.desc_am : r.desc_en}</div>
             <div style={{ marginTop: 16, color: T.forest, fontWeight: 700, fontSize: 13 }}>{t.cont}</div>
           </button>
@@ -780,7 +784,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
   const u = UI[lang];
   const roleLabel = { tenant: "Tenant · ተከራይ", landlord: "Landlord · አከራይ", broker: "Broker · ደላላ" }[role];
   return (
-    <header style={{ background: T.forest, color: "#fff", padding: "12px 22px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+    <header style={{ background: T.forest, color: "#fff", padding: "60px 22px 12px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <span style={{ fontFamily: displayFont, fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>Ethio Kiray</span>
         <span style={{ fontSize: 14, opacity: 0.85 }}>ኢትዮ ኪራይ</span>
@@ -1646,7 +1650,9 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1.1fr) minmax(280px, 1fr)", gap: 18, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(300px, 1.1fr)", gap: 18, alignItems: "start" }}>
+          <MapPanel results={mine} selected={selected} setSelected={setSelected}
+            subtitle={isBroker ? "Your managed portfolio" : "Your properties"} />
           <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {mine.map((l) => {
               const inq = myThreads.filter((t) => t.listingId === l.id).length;
@@ -1715,8 +1721,6 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
               );
             })}
           </section>
-          <MapPanel results={mine} selected={selected} setSelected={setSelected}
-            subtitle={isBroker ? "Your managed portfolio" : "Your properties"} />
         </div>
       </div>
     );
