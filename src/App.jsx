@@ -28,7 +28,7 @@ const UI = {
     saved_title: "Saved listings", saved_subtitle: "You'll get a notification if a saved listing's price changes or it's rented out.",
     saved_empty: "Nothing saved yet — tap the heart on any listing.",
     inquiries_title: "Tenant inquiries", inquiries_subtitle: "Reply fast — listings that respond within 2 hours rank higher in tenant search.",
-    signedInAs: "Signed in as", verifiedTag: "✓ verified",
+    signedInAs: "Signed in as", verifiedTag: "✓ verified", unverifiedTag: "unverified — 5+ listings required",
     brokerNote: "Listings you manage on behalf of owners. Owner details stay private to you.",
     landlordNote: "Listings you own and manage directly.",
     stat_active: "Active listings", stat_views: "Views this month", stat_inquiries: "Open inquiries",
@@ -79,7 +79,7 @@ const UI = {
     saved_title: "የተቀመጡ ማስታወቂያዎች", saved_subtitle: "የተቀመጠ ማስታወቂያ ዋጋ ቢቀየር ወይም ቢከራይ ማሳወቂያ ይደርስዎታል።",
     saved_empty: "እስካሁን ምንም አልተቀመጠም — በማንኛውም ማስታወቂያ ላይ ልብን ይንኩ።",
     inquiries_title: "የተከራይ ጥያቄዎች", inquiries_subtitle: "በፍጥነት ይመልሱ — በ2 ሰዓት ውስጥ የሚመልሱ ማስታወቂያዎች በተከራይ ፍለጋ ላይ ከፍ ብለው ይታያሉ።",
-    signedInAs: "የገቡት እንደ", verifiedTag: "✓ የተረጋገጠ",
+    signedInAs: "የገቡት እንደ", verifiedTag: "✓ የተረጋገጠ", unverifiedTag: "ያልተረጋገጠ — 5+ ማስታወቂያዎች ያስፈልጋሉ",
     brokerNote: "በባለቤቶች ስም የሚያስተዳድሯቸው ማስታወቂያዎች። የባለቤት መረጃ ለእርስዎ ብቻ የተደበቀ ነው።",
     landlordNote: "የእርስዎ ንብረት የሆኑ እና በቀጥታ የሚያስተዳድሯቸው ማስታወቂያዎች።",
     stat_active: "ንቁ ማስታወቂያዎች", stat_views: "የዚህ ወር እይታዎች", stat_inquiries: "ክፍት ጥያቄዎች",
@@ -231,6 +231,18 @@ const PROPERTY_KINDS = {
 // which browses by specific kind of property rather than the broader
 // Residential/Business category.
 const ALL_KINDS = [...new Set([...PROPERTY_KINDS.Residential, ...PROPERTY_KINDS.Business])];
+
+// Verification rule: a lister is verified once they have at least this
+// many listings of their own — computed live from the current data every
+// time a card renders, not stored as a stale flag on each listing. Mirrors
+// the same rule in api/_lib/listings-store.js (kept as a small duplicate
+// here since this file runs client-side and can't import that server
+// module directly).
+const VERIFIED_THRESHOLD = 5;
+function isVerified(listing, allListings) {
+  if (!listing.ownerId) return false; // no stable identity to count listings by (guest/legacy post)
+  return allListings.filter((l) => l.ownerId === listing.ownerId).length >= VERIFIED_THRESHOLD;
+}
 const FEATURE_OPTIONS = ["Ceramic floor", "Cement floor", "Private bathroom", "Shared bathroom", "Private kitchen", "Water tank", "Own electric meter", "Furnished", "Parking", "Guarded compound", "Balcony", "Backup generator"];
 
 /* ================= SEED CHAT THREADS =================
@@ -842,7 +854,7 @@ function Header({ role, tabs, tab, setTab, onSwitchRole, account, lang, setLang 
 }
 
 /* ================= LISTING CARD (shared) ================= */
-function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, lang = "en" }) {
+function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, lang = "en", allListings }) {
   const isSel = selected === l.id;
   const [gallery, setGallery] = useState(false);
   const hasPhotos = l.photos && l.photos.length > 0;
@@ -914,7 +926,7 @@ function ListingCard({ l, selected, onSelect, saved, onToggleSave, tenantMode, l
           )}
           <div style={{ fontSize: 13 }}>
             Listed by <strong>{l.name}</strong>{" "}
-            {l.verified
+            {isVerified(l, allListings || [l])
               ? <span style={{ color: T.forest, fontSize: 12 }}>✓ ID verified</span>
               : <span style={{ color: T.danger, fontSize: 12 }}>unverified</span>}
             <div style={{ fontSize: 12, color: T.mute, marginTop: 2 }}>
@@ -1367,7 +1379,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {saved.length === 0 && <div style={{ background: T.card, border: `1px dashed ${T.line}`, borderRadius: 14, padding: 30, textAlign: "center", color: T.mute, fontSize: 14 }}>{u.saved_empty}</div>}
         {listings.filter((l) => saved.includes(l.id)).map((l) => (
-          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode lang={lang} />
+          <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected} saved onToggleSave={toggleSave} tenantMode lang={lang} allListings={listings} />
         ))}
       </div>
     </div>
@@ -1449,7 +1461,7 @@ function TenantApp({ tab, initialChatListingId, lang, listings }) {
           )}
           {results.map((l) => (
             <ListingCard key={l.id} l={l} selected={selected} onSelect={setSelected}
-              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode lang={lang} />
+              saved={saved.includes(l.id)} onToggleSave={toggleSave} tenantMode lang={lang} allListings={listings} />
           ))}
         </section>
       </div>
@@ -1687,7 +1699,12 @@ function ManagerApp({ role, tab, setTab, chats, sendMessage, account, lang, list
           <h2 style={{ fontFamily: displayFont, fontSize: 20, margin: 0 }}>
             {isBroker ? u.nav_listings_broker : u.nav_listings_landlord}
           </h2>
-          <span style={{ fontSize: 13, color: T.mute }}>{u.signedInAs} <strong>{me}</strong> <span style={{ color: T.forest }}>{u.verifiedTag}</span></span>
+          <span style={{ fontSize: 13, color: T.mute }}>
+            {u.signedInAs} <strong>{me}</strong>{" "}
+            {account?.telegramId && mine.length >= 5
+              ? <span style={{ color: T.forest }}>{u.verifiedTag}</span>
+              : <span style={{ color: T.danger }}>{u.unverifiedTag}</span>}
+          </span>
         </div>
         <p style={{ color: T.mute, fontSize: 13, margin: "0 0 18px" }}>
           {isBroker ? u.brokerNote : u.landlordNote}

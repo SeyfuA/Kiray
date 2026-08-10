@@ -82,3 +82,16 @@ export async function updateListing(id, updates, requesterId) {
 export function realOnly(listings) {
   return listings.filter((l) => !l.sample);
 }
+
+// Verification threshold: a lister is verified once they have at least
+// this many listings of their own. Computed live from the current data
+// every time, rather than stored as a flag on each listing — a person who
+// drops back under 5 (deletes listings) correctly loses verified status
+// again, and changing the threshold later is a one-line change here, not
+// a data migration across every existing listing.
+const VERIFIED_THRESHOLD = 5;
+
+export function isVerified(listing, allListings) {
+  if (!listing.ownerId) return false; // no stable identity to count listings by (guest/legacy post)
+  return allListings.filter((l) => l.ownerId === listing.ownerId).length >= VERIFIED_THRESHOLD;
+}

@@ -28,7 +28,7 @@
    posted as a guest) fall back to matching Ethio Kiray's demo landlord/
    broker account, same prototype behaviour as before.
 */
-import { getAllListings, realOnly } from "./_lib/listings-store.js";
+import { getAllListings, realOnly, isVerified } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const APP_URL = process.env.KIRAY_APP_URL;
@@ -198,21 +198,24 @@ function searchListings(listings, query) {
   );
 }
 
-// "Top" = verified listers first, then most recently posted.
-function rankListings(list) {
+// "Top" = verified listers first, then most recently posted. allListings
+// (defaults to list itself if not given) is what verification is actually
+// computed against — a person's total listing count, not just however
+// many happen to be in this particular filtered subset.
+function rankListings(list, allListings = list) {
   return [...list].sort(
-    (a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0) || new Date(b.posted) - new Date(a.posted)
+    (a, b) => (isVerified(b, allListings) ? 1 : 0) - (isVerified(a, allListings) ? 1 : 0) || new Date(b.posted) - new Date(a.posted)
   );
 }
 
 // For the no-search-term view: one best listing per city, so results span
 // the country instead of clustering wherever the data happens to be densest.
-function topAcrossCities(list, n) {
+function topAcrossCities(list, n, allListings = list) {
   const bestPerCity = new Map();
-  for (const l of rankListings(list)) {
+  for (const l of rankListings(list, allListings)) {
     if (!bestPerCity.has(l.city)) bestPerCity.set(l.city, l);
   }
-  return rankListings([...bestPerCity.values()]).slice(0, n);
+  return rankListings([...bestPerCity.values()], allListings).slice(0, n);
 }
 
 function findListing(listings, id) {
@@ -239,10 +242,10 @@ function countListings(listings, region, city) {
 // real classifieds app — those aren't machine-translated, only the app's own
 // UI chrome (labels, buttons, units) is.
 
-function formatListing(l, lang) {
+function formatListing(l, lang, allListings) {
   const s = STR[lang];
   const lines = [
-    `🏠 <b>${l.title}</b>${l.verified ? " ✅" : ""}`,
+    `🏠 <b>${l.title}</b>${isVerified(l, allListings || [l]) ? " ✅" : ""}`,
     `📍 ${l.area || l.hood}, ${l.city}`,
     `💰 ${s.etb_month(l.price)}`,
   ];
@@ -376,14 +379,14 @@ async function sendCityListings(chatId, lang, regionIdx, cityIdx, listings) {
   const city = cities[cityIdx];
   if (!city) return sendCityMenu(chatId, lang, regionIdx, listings);
 
-  const results = rankListings(listings.filter((l) => l.region === region && l.city === city));
+  const results = rankListings(listings.filter((l) => l.region === region && l.city === city), listings);
   const shown = results.slice(0, TOP_COUNT);
 
   await sendMessage(chatId, s.city_listings_header(city, region, results.length, shown.length));
   for (const l of shown) {
     await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
-    await sendMessage(chatId, formatListing(l, lang), { reply_markup: listingKeyboard(lang, l) });
+    await sendMessage(chatId, formatListing(l, lang, listings), { reply_markup: listingKeyboard(lang, l) });
   }
   await sendMessage(chatId, s.want_another_area, {
     reply_markup: {
@@ -400,7 +403,7 @@ async function sendTopListings(chatId, lang, query, listings) {
   listings = listings.filter((l) => !l.rented); // tenant-facing browse: available only
   const s = STR[lang];
   const matches = searchListings(listings, query);
-  const results = query ? rankListings(matches) : topAcrossCities(matches, listings.length);
+  const results = query ? rankListings(matches, listings) : topAcrossCities(matches, listings.length, listings);
 
   if (results.length === 0) {
     await sendMessage(chatId, s.no_results(query));
@@ -412,12 +415,12 @@ async function sendTopListings(chatId, lang, query, listings) {
   for (const l of shown) {
     await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
-    await sendMessage(chatId, formatListing(l, lang), { reply_markup: listingKeyboard(lang, l) });
+    await sendMessage(chatId, formatListing(l, lang, listings), { reply_markup: listingKeyboard(lang, l) });
   }
   await sendMessage(chatId, s.narrow_down, openAppRow(lang) ? { reply_markup: { inline_keyboard: [openAppRow(lang)] } } : {});
 }
 
-async function sendContactCard(chatId, lang, listing) {
+async function sendContactCard(chatId, lang, listing, allListings) {
   const s = STR[lang];
   if (!listing) {
     await sendMessage(chatId, s.listing_unavailable);
@@ -437,7 +440,7 @@ async function sendContactCard(chatId, lang, listing) {
   const lines = [
     s.contact_for(listing.title),
     `${listing.lister === "Broker" || listing.lister === "Agent" ? "🤝" : "🏠"} ${listing.name} (${listing.lister})${listing.owner ? ` · ${listing.owner}` : ""}`,
-    listing.verified ? s.verified : "",
+    isVerified(listing, allListings || [listing]) ? s.verified : "",
     `${s.call_btn}: ${listing.phone}`,
   ].filter(Boolean);
 
@@ -483,7 +486,7 @@ async function sendMyListingsPreview(chatId, lang, role, listings, ownerTelegram
   const s = STR[lang];
 
   if (ownerTelegramId) {
-    const mine = rankListings(listings.filter((l) => l.ownerId === ownerTelegramId));
+    const mine = rankListings(listings.filter((l) => l.ownerId === ownerTelegramId), listings);
     if (mine.length === 0) {
       await sendMessage(chatId, s.my_listings_empty);
       return;
@@ -492,7 +495,7 @@ async function sendMyListingsPreview(chatId, lang, role, listings, ownerTelegram
     for (const l of mine.slice(0, TOP_COUNT)) {
       await sendPhotoAlbum(chatId, l);
       await sendVenuePin(chatId, l);
-      await sendMessage(chatId, `${formatListing(l, lang)}\n${s.views(l.views)}`, {
+      await sendMessage(chatId, `${formatListing(l, lang, listings)}\n${s.views(l.views)}`, {
         reply_markup: APP_URL
           ? { inline_keyboard: [[{ text: s.manage_in_app_btn, web_app: { url: `${APP_URL}?role=${role}&tab=listings` } }]] }
           : undefined,
@@ -502,7 +505,7 @@ async function sendMyListingsPreview(chatId, lang, role, listings, ownerTelegram
   }
 
   const name = DEMO[role];
-  const mine = rankListings(listings.filter((l) => l.name === name && !l.ownerId));
+  const mine = rankListings(listings.filter((l) => l.name === name && !l.ownerId), listings);
   if (mine.length === 0) {
     await sendMessage(chatId, s.my_listings_empty);
     return;
@@ -511,7 +514,7 @@ async function sendMyListingsPreview(chatId, lang, role, listings, ownerTelegram
   for (const l of mine.slice(0, TOP_COUNT)) {
     await sendPhotoAlbum(chatId, l);
     await sendVenuePin(chatId, l);
-    await sendMessage(chatId, `${formatListing(l, lang)}\n${s.views(l.views)}`, {
+    await sendMessage(chatId, `${formatListing(l, lang, listings)}\n${s.views(l.views)}`, {
       reply_markup: APP_URL
         ? { inline_keyboard: [[{ text: s.manage_in_app_btn, web_app: { url: `${APP_URL}?role=${role}&tab=listings` } }]] }
         : undefined,
@@ -562,7 +565,7 @@ export default async function handler(req, res) {
         const [, regionIdx, cityIdx] = data.split("_");
         await sendCityListings(chatId, lang, Number(regionIdx), Number(cityIdx), listings);
       } else if (data.startsWith("contact_")) {
-        await sendContactCard(chatId, lang, findListing(listings, data.replace("contact_", "")));
+        await sendContactCard(chatId, lang, findListing(listings, data.replace("contact_", "")), listings);
       } else if (data === "owner") {
         await sendOwnerMenu(chatId, lang);
       } else if (data.startsWith("ownerlist_")) {
@@ -593,7 +596,7 @@ export default async function handler(req, res) {
       if (linkedListing) {
         await sendPhotoAlbum(chatId, linkedListing);
         await sendVenuePin(chatId, linkedListing);
-        await sendMessage(chatId, formatListing(linkedListing, lang), { reply_markup: listingKeyboard(lang, linkedListing) });
+        await sendMessage(chatId, formatListing(linkedListing, lang, listings), { reply_markup: listingKeyboard(lang, linkedListing) });
       }
       await sendStartMenu(chatId, lang);
     } else if (text.startsWith("/help")) {

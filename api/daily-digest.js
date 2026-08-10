@@ -59,7 +59,7 @@
    prevent an actual duplicate post; that would need a persistent store
    (e.g. Vercel KV) to remember "already posted today", which isn't set up.
 */
-import { getAllListings, realOnly } from "./_lib/listings-store.js";
+import { getAllListings, realOnly, isVerified } from "./_lib/listings-store.js";
 
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const CHANNEL_ID = process.env.KIRAY_CHANNEL_ID;
@@ -159,9 +159,9 @@ async function sendPhotoAlbum(chatId, l) {
   );
 }
 
-function formatListing(l) {
+function formatListing(l, allListings) {
   const lines = [
-    `🏠 <b>${l.title}</b>${l.verified ? " ✅" : ""}`,
+    `🏠 <b>${l.title}</b>${isVerified(l, allListings || [l]) ? " ✅" : ""}`,
     `📍 ${l.area || l.hood}, ${l.city}`,
     `💰 ${birr(l.price)}`,
   ];
@@ -225,7 +225,7 @@ export default async function handler(req, res) {
   for (const l of picks) {
     await sendPhotoAlbum(CHANNEL_ID, l);
     await sendVenuePin(CHANNEL_ID, l);
-    await sendMessage(CHANNEL_ID, formatListing(l), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
+    await sendMessage(CHANNEL_ID, formatListing(l, listings), { reply_markup: listingButtons(l) }, `listing ${l.id} card`);
   }
 
   const fullMiniAppLink = miniAppLink();
